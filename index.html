@@ -1,0 +1,77 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Perfilador de aptitud vocacional </title>
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;600&display=swap" rel="stylesheet">
+    <!-- Favicon -->
+    <link rel="icon" href="/src/unnamed.png" type="image/png">
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+    <!-- ====== OPCIÓN 1: HEADER CON VIDEO  ====== -->
+    <!-- Si prefieres un banner estático, comenta esta sección completa -->
+    <!-- y descomenta la "OPCIÓN 2: HEADER CON BANNER" más abajo -->
+   <!--- <header class="video-header">
+        <video autoplay loop muted playsinline>
+            <source src="tu-video.mp4" type="video/mp4">
+            Tu navegador no soporta la etiqueta de video.
+        </video>
+    </header> --->
+
+    <!-- ====== OPCIÓN 2: HEADER CON BANNER (ACTIVA) ====== -->
+    <!-- Si prefieres usar esto, descomenta esta sección -->
+    <!-- y comenta la "OPCIÓN 1: HEADER CON VIDEO" de arriba -->
+    <!-- *** USAMOS EL ELEMENTO <picture> PARA IMÁGENES RESPONSIVAS *** -->
+  
+    <header class="banner-header">
+        <picture>
+            <! -- Imagen para pantallas pequeñas (móviles) - hasta 480px de ancho -->
+            <source media="(max-width: 480px)" srcset="tu-banner-mobile.jpg">
+
+            <! -- Imagen para pantallas medianas (tablets) - hasta 768px de ancho -->
+            <source media="(max-width: 768px)" srcset="tu-banner-tablet.jpg">
+
+            <! -- Imagen por defecto para pantallas grandes (escritorio) y fallback -->
+            <! --! RECUERDA CAMBIAR ESTAS RUTAS POR TUS IMÁGENES REALES -- ! -->
+            <img src="/src/4.png" alt="Banner Test Vocacional">
+        </picture>
+    </header>
+    
+
+
+    <div class="container">
+        <h2>Test Vocacional</h2>
+        <p class="intro-text">Responde las siguientes preguntas indicando tu nivel de interés.</p>
+        <p class="intro-text"> ¡Sé honesto/a contigo mismo/a!</p>
+
+        <!-- Barra de Progreso -->
+        <div class="progress-container">
+            <div id="progress-bar" class="progress-bar-inner"></div>
+            <span id="progress-text" class="progress-bar-text">0% completado</span>
+        </div>
+
+        <form id="vocational-test">
+            <div id="preguntas-container">
+                <div class="loading-placeholder">Cargando preguntas...</div>
+            </div>
+            <button type="button" id="submit-button">Ver Mi Resultado</button>
+        </form>
+
+        <div id="resultado">
+            <!-- El resultado se mostrará aquí -->
+        </div>
+    </div>
+
+    <footer>
+        <img src="/src/Logo-UNIREM-b.png" alt="UNIREM 2022 Universidad de la República Mexicana" class="footer-logo">
+    </footer>
+
+    <script src="script.js"></script>
+</body>
+</html>
