@@ -5,96 +5,87 @@
     box-sizing: border-box;
 }
 
+html {
+    scroll-behavior: smooth;
+}
+
 body {
     font-family: 'Poppins', sans-serif;
     line-height: 1.7;
-    background-color: #f0e4f7; /* Fondo morado suave */
-    color: #495057; /* Color de texto por defecto */
+    color: #212529; /* Darker text for better contrast */
+    background-color: #ffffff; /* Base white */
 }
 
-/* --- Headers (Video y Banner) --- */
-.video-header, .banner-header {
-    position: relative;
-    height: 45vh;
+/* --- Header Adaptativo (Banner) --- */
+.banner-adaptive-height {
     width: 100%;
+    padding: 20px 0;
+    background-color: #e3f2fd; /* Very light blue background */
+    text-align: center;
     overflow: hidden;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    background-color: #333;
+    border-bottom: 1px solid #bbdefb; /* Light blue border */
 }
 
-.video-header video {
-    position: absolute;
-    top: 50%;
-    left: 50%;
-    min-width: 100%;
-    min-height: 100%;
-    width: auto;
-    height: auto;
-    transform: translateX(-50%) translateY(-50%);
-    z-index: 0;
-    object-fit: cover;
-}
-
-/* Estilos para la imagen dentro del Banner Header */
-.banner-header img {
+.banner-adaptive-height picture,
+.banner-adaptive-height img {
     display: block;
-    width: 100%;
-    height: 100%;
-    object-fit: cover;
-    object-position: center;
+    max-width: 100%;
+    height: auto;
+    margin: 0 auto;
+    border-radius: 8px;
+    box-shadow: 0 4px 12px rgba(0, 86, 179, 0.1); /* Subtle blue shadow */
 }
 
+/* --- Área de Contenido Principal --- */
+.content-area {
+    background-color: #f8f9fa; /* Light grey background for content area */
+    padding: 1px 0;
+}
 
-/* --- Contenedor Principal (SIN FONDO BLANCO) --- */
+/* --- Contenedor (Ancho máximo para texto/preguntas) --- */
 .container {
-    max-width: 850px; /* Mantiene el ancho máximo */
-    margin: 40px auto; /* Mantiene el centrado y margen superior/inferior */
-    padding: 35px 40px; /* Mantiene el padding interno */
-    /* Eliminamos el fondo, la sombra y el borde redondeado */
-    /* background-color: #ffffff; */
-    /* box-shadow: 0 5px 15px rgba(0, 0, 0, 0.08); */
-    /* border-radius: 12px; */
+    max-width: 850px;
+    margin: 40px auto;
+    padding: 0 20px;
 }
 
-/* Títulos y texto introductorio dentro del contenedor */
+/* Títulos y texto introductorio */
 h2 {
     text-align: center;
-    color: #3c1053; /* Morado oscuro para mejor contraste sobre fondo lila */
+    color: #0a3d62; /* Dark blue */
     margin-bottom: 15px;
-    font-weight: 600;
-    font-size: 2.2em; /* Un poco más grande */
+    font-weight: 700;
+    font-size: 2.2em;
+    padding-top: 20px;
 }
 
 .intro-text {
     text-align: center;
-    color: #6a1b9a; /* Morado medio */
-    margin-bottom: 35px; /* Más espacio antes de la barra */
+    color: #0d6efd; /* Medium blue */
+    margin-bottom: 35px;
     font-size: 1.15em;
-    max-width: 650px; /* Limitar ancho del intro */
+    max-width: 650px;
     margin-left: auto;
     margin-right: auto;
 }
 
 /* --- Barra de Progreso --- */
-/* (Sin cambios en la barra de progreso, se verá bien sobre el fondo lila) */
 .progress-container {
     width: 90%;
     height: 25px;
-    background-color: rgba(255, 255, 255, 0.5); /* Blanco semitransparente */
-    border: 1px solid rgba(142, 68, 173, 0.3); /* Borde morado sutil */
+    background-color: #e9ecef; /* Light grey */
+    border: 1px solid #dee2e6;
     border-radius: 50px;
-    margin: 0 auto 45px auto; /* Más margen inferior */
+    margin: 0 auto 45px auto;
     position: relative;
     overflow: hidden;
-    /* box-shadow: inset 0 1px 3px rgba(0,0,0,0.1); */ /* Quitamos sombra interna */
 }
 
 .progress-bar-inner {
     height: 100%;
     width: 0%;
-    background-image: linear-gradient(to right, #8e44ad, #9b59b6);
+    /* Yellow fill for contrast */
+    background-image: linear-gradient(to right, #ffca2c, #ffb300);
     border-radius: 50px;
     transition: width 0.4s ease-out;
     position: absolute;
@@ -107,26 +98,25 @@ h2 {
     top: 50%;
     left: 50%;
     transform: translate(-50%, -50%);
-    color: #ffffff;
+    color: #403100; /* Dark text on yellow */
     font-size: 0.8em;
     font-weight: 600;
-    text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.5); /* Sombra más definida */
+    text-shadow: none; /* Remove shadow on yellow */
     z-index: 2;
     white-space: nowrap;
 }
 
-
-/* --- Formulario y Preguntas (ESTILO INTEGRADO SIN CONTENEDOR) --- */
+/* --- Formulario y Preguntas --- */
 #vocational-test {
     margin-top: 25px;
 }
 
-/* Separador entre preguntas */
 .question {
     border-radius: 0;
-    padding: 30px 0; /* Más padding vertical */
+    padding: 30px 0;
     margin-bottom: 0;
-    border-bottom: 1px solid rgba(142, 68, 173, 0.3); /* Separador morado más sutil */
+    /* Light blue separator */
+    border-bottom: 1px solid rgba(0, 123, 255, 0.2);
 }
 
 .question:last-child {
@@ -134,230 +124,205 @@ h2 {
     padding-bottom: 20px;
 }
 
-/* Texto de la pregunta */
 .question p {
     font-weight: 400;
-    margin-bottom: 25px; /* Más espacio antes de las opciones */
-    font-size: 1.15em; /* Un poco más grande */
-    color: #3c1053;
+    margin-bottom: 25px;
+    font-size: 1.15em;
+    color: #0a3d62; /* Dark Blue */
     display: flex;
     align-items: flex-start;
-    line-height: 1.6; /* Más interlineado */
+    line-height: 1.6;
 }
 
-/* Número de pregunta */
 .question .question-number {
     font-weight: 700;
     font-size: 1.25em;
-    color: #8e44ad;
-    margin-right: 15px; /* Más separación */
+    color: #0d6efd; /* Medium Blue */
+    margin-right: 15px;
     min-width: 35px;
     display: inline-block;
     line-height: 1.5;
     padding-top: 1px;
 }
 
-/* Opciones (Botones) - Manteniendo el estilo que te gustó */
+/* Opciones (Botones) */
 .options {
     display: flex;
     flex-wrap: wrap;
-    gap: 15px; /* Un poco más de espacio */
+    gap: 15px;
     justify-content: center;
-    padding-left: 50px; /* Indentación ajustada (aprox numero + margen) */
+    padding-left: 50px;
 }
 
 .options label {
-    flex-basis: calc(33.333% - 15px); /* Ajustar por el gap */
-    min-width: 160px; /* Ligeramente más anchos */
+    flex-basis: calc(33.333% - 15px);
+    min-width: 160px;
     display: flex;
     align-items: center;
     justify-content: center;
     gap: 8px;
     cursor: pointer;
-    background-color: #ffffff; /* Blanco sólido para contraste */
+    background-color: #ffffff; /* White */
     padding: 12px 15px;
-    border-radius: 25px; /* Aún más redondeado */
-    border: 1px solid #d1c4e9; /* Borde morado muy claro */
+    border-radius: 25px;
+    border: 1px solid #ced4da; /* Grey border */
     transition: all 0.3s ease;
     text-align: center;
-    color: #6a1b9a;
+    color: #0b5ed7; /* Darker blue text */
     font-weight: 400;
     font-size: 0.95em;
-    box-shadow: 0 2px 4px rgba(142, 68, 173, 0.1); /* Sombra sutil */
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
 }
 
-.options input[type="radio"] {
-    appearance: none;
-    -webkit-appearance: none;
-    -moz-appearance: none;
-    position: absolute;
-    opacity: 0;
-    width: 0;
-    height: 0;
+.options input[type="radio"] { /* Ocultar radio original */
+    appearance: none; -webkit-appearance: none; -moz-appearance: none;
+    position: absolute; opacity: 0; width: 0; height: 0;
 }
 
 .options label:hover {
-    background-color: #ede7f6; /* Morado pálido al pasar */
-    border-color: #b39ddb;
+    background-color: #fff3cd; /* Pale Yellow on hover */
+    border-color: #ffe69c; /* Yellow border on hover */
+    color: #664d03; /* Dark yellow text on hover */
     transform: translateY(-2px);
-     box-shadow: 0 4px 8px rgba(142, 68, 173, 0.15);
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.08);
 }
 
-.options input[type="radio"]:checked + span {
-     font-weight: 600;
-}
+.options input[type="radio"]:checked + span { font-weight: 600; }
 
 .options label:has(input[type="radio"]:checked) {
-     background-color: #8e44ad;
-     color: white;
-     border-color: #7b1fa2; /* Borde morado más oscuro */
-     box-shadow: 0 3px 8px rgba(142, 68, 173, 0.4);
-     transform: translateY(-1px);
+    background-color: #0d6efd; /* Primary Blue */
+    color: white;
+    border-color: #0a58ca; /* Darker blue border */
+    box-shadow: 0 3px 8px rgba(13, 110, 253, 0.4); /* Blue shadow */
+    transform: translateY(-1px);
 }
 
-
-/* Botón de Resultado */
+/* --- Botón de Resultado --- */
 #submit-button {
     display: block;
-    width: 60%;
-    margin: 60px auto 30px auto; /* Más margen arriba y abajo */
-    padding: 16px 25px; /* Más padding */
-    font-size: 1.3em; /* Más grande */
+    width: auto;
+    min-width: 250px;
+    margin: 60px auto 30px auto;
+    padding: 16px 35px;
+    font-size: 1.3em;
     font-weight: 600;
-    color: #fff;
-    background-image: linear-gradient(to right, #8e44ad, #5e3370);
+    color: #ffffff; /* White text */
+    /* Blue gradient */
+    background-image: linear-gradient(to right, #0d6efd, #0a58ca);
     border: none;
     border-radius: 50px;
     cursor: pointer;
     transition: all 0.3s ease;
-    box-shadow: 0 4px 15px rgba(142, 68, 173, 0.4);
+    box-shadow: 0 4px 15px rgba(13, 110, 253, 0.35); /* Blue shadow */
+    text-align: center;
 }
 
 #submit-button:hover {
-    background-image: linear-gradient(to right, #7d3c98, #4a235a);
-    box-shadow: 0 6px 20px rgba(142, 68, 173, 0.5);
-    transform: translateY(-3px); /* Mayor efecto hover */
+    background-image: linear-gradient(to right, #0a58ca, #0b5ed7); /* Darker blue */
+    box-shadow: 0 6px 20px rgba(13, 110, 253, 0.45);
+    transform: translateY(-3px);
 }
 
-/* Área de Resultado (Se verá sobre el fondo lila) */
+/* --- Área de Resultado --- */
 #resultado {
     margin-top: 40px;
-    padding: 35px 40px; /* Más padding */
-    background-color: rgba(255, 255, 255, 0.85); /* Fondo blanco semitransparente */
-    border: 1px solid rgba(142, 68, 173, 0.3); /* Borde morado claro */
-    border-radius: 15px; /* Bordes redondeados */
+    margin-bottom: 40px;
+    padding: 35px 40px;
+    background-color: #ffffff; /* White background */
+    border: 1px solid #dee2e6; /* Light grey border */
+    border-radius: 15px;
     text-align: center;
     display: none;
-    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1); /* Sombra suave */
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08); /* Soft shadow */
 }
 
-/* Estilos internos del resultado (sin cambios mayores) */
-#resultado h3 { color: #5e3370; margin-bottom: 20px; font-size: 1.7em; }
-#resultado h4 { color: #8e44ad; margin-top: 5px; margin-bottom: 15px; font-size: 1.5em; font-weight: 600; }
-#resultado p { font-size: 1.1em; color: #333; margin-bottom: 12px; line-height: 1.6; }
-#resultado p strong { color: #8e44ad; }
+#resultado h3 { color: #0a3d62; margin-bottom: 20px; font-size: 1.7em; } /* Dark blue */
+#resultado h4 { color: #0d6efd; margin-top: 5px; margin-bottom: 15px; font-size: 1.5em; font-weight: 600; } /* Medium blue */
+#resultado p { font-size: 1.1em; color: #212529; margin-bottom: 12px; line-height: 1.6; }
+#resultado p strong { color: #0d6efd; } /* Medium blue for emphasis */
 #resultado ul { list-style: none; padding: 0; margin-top: 20px; margin-bottom: 20px; }
 #resultado li {
-    margin-bottom: 18px;
-    padding: 15px 20px;
-    background-color: #fff;
-    border-left: 5px solid #9b59b6;
-    border-radius: 8px;
-    text-align: left;
+    margin-bottom: 18px; padding: 15px 20px; background-color: #f8f9fa; /* Light grey bg */
+    border-left: 5px solid #0d6efd; /* Blue border */
+    border-radius: 8px; text-align: left;
     box-shadow: 0 2px 5px rgba(0,0,0,0.05);
 }
-#resultado li strong { color: #5e3370; display: block; margin-bottom: 8px; font-size: 1.1em;}
-#resultado p em { color: #6a1b9a; font-size: 1em; display: block; margin-top: 20px; }
+#resultado li strong { color: #0a3d62; display: block; margin-bottom: 8px; font-size: 1.1em;} /* Dark blue title */
+#resultado p em { color: #0b5ed7; font-size: 1em; display: block; margin-top: 20px; } /* Darker blue */
 
-
-/* Footer */
+/* --- Footer --- */
 footer {
     display: flex;
     justify-content: center;
     align-items: center;
-    margin-top: 60px; /* Más separación */
+    margin-top: 0;
     padding: 30px 20px;
-    /* Quitamos fondo y borde para integrar con el lila */
-    /* background-color: #e9ecef; */
-    /* border-top: 1px solid #dee2e6; */
-    min-height: 80px;
+    background-color: #e9ecef; /* Light grey */
+    border-top: 1px solid #dee2e6;
+    min-height: 100px;
 }
 
 .footer-logo {
     display: block;
-    max-width: 180px; /* Permitir que sea un poco más grande si es necesario */
-    max-height: 55px; /* Ajustar según tu logo */
+    max-width: 280px;
+    max-height: 65px;
     height: auto;
     width: auto;
-    opacity: 0.8; /* Un poco de transparencia */
-    transition: opacity 0.3s ease;
-}
-.footer-logo:hover {
-    opacity: 1;
 }
 
 /* Placeholder de carga */
 .loading-placeholder {
     text-align: center;
     padding: 40px;
-    color: #6a1b9a; /* Ajustar color */
+    color: #6c757d; /* Standard grey */
     font-style: italic;
     font-size: 1.1em;
 }
 
-/* --- Media Queries --- */
-@media (max-width: 900px) { /* Ajustamos breakpoint para el contenedor */
-     .container {
-        max-width: 95%; /* Usar más ancho en pantallas medianas */
-        padding: 30px 25px;
-    }
+/* --- Media Queries --- (Adjust breakpoints/styles as needed) --- */
+@media (max-width: 900px) {
+     .container { max-width: 100%; padding: 0 30px; }
 }
 
 @media (max-width: 768px) {
-    h2 { font-size: 1.8em; }
+    .banner-adaptive-height { padding: 15px 0; }
+    h2 { font-size: 1.9em; padding-top: 15px;}
     .intro-text { font-size: 1.1em; }
-    .progress-container { width: 95%; height: 20px; }
+    .progress-container { width: 95%; height: 20px; margin-bottom: 40px;}
     .progress-bar-text { font-size: 0.7em; }
 
     .options label {
-        flex-basis: calc(50% - 10px); /* Dos opciones */
-        min-width: 140px;
-        font-size: 0.9em;
+        flex-basis: calc(50% - 10px);
+        min-width: 140px; font-size: 0.9em;
     }
-    .options {
-        padding-left: 40px;
-        gap: 10px;
-    }
+    .options { padding-left: 40px; gap: 10px; }
 
     .question p { font-size: 1.1em; }
     .question .question-number { font-size: 1.15em; margin-right: 12px; min-width: 30px;}
-    #submit-button { width: 70%; font-size: 1.2em; padding: 14px 20px;}
-    .footer-logo { max-height: 50px; }
+    #submit-button { min-width: 220px; font-size: 1.2em; padding: 14px 30px;}
     #resultado { padding: 30px 25px; }
+    .footer-logo { max-width: 240px; max-height: 55px; }
+    footer { min-height: 90px; padding: 25px 15px; }
 }
 
 @media (max-width: 480px) {
-     .video-header, .banner-header { height: 40vh; } /* Un poco más alto en móvil */
-     .container { padding: 25px 15px; }
-     h2 { font-size: 1.6em; }
-     .intro-text { font-size: 1em; }
+    .banner-adaptive-height { padding: 10px 0; }
+     h2 { font-size: 1.7em; }
+     .intro-text { font-size: 1.05em; }
+     .container { padding: 0 15px; margin: 25px auto; }
 
-     /* Una opción por línea */
      .options label {
-        flex-basis: 100%;
-        justify-content: flex-start;
-        padding: 12px 20px; /* Ajustar padding */
+        flex-basis: 100%; justify-content: flex-start;
+        padding: 12px 20px;
         text-align: left;
      }
-     .options {
-        padding-left: 0; /* Sin indentación extra */
-        gap: 10px;
-     }
+     .options { padding-left: 0; gap: 10px; }
 
      .question p { font-size: 1em; }
      .question .question-number { font-size: 1.1em; margin-right: 10px; min-width: 28px; }
 
-     #submit-button { width: 90%; font-size: 1.15em; padding: 14px 20px; margin: 50px auto 25px auto;}
+     #submit-button { width: 90%; min-width: 0; font-size: 1.15em; padding: 14px 20px; margin: 50px auto 25px auto;}
+     #resultado { padding: 25px 20px; }
      #resultado h3 { font-size: 1.5em; }
      #resultado h4 { font-size: 1.3em; }
      #resultado p { font-size: 1em; }
@@ -365,6 +330,28 @@ footer {
      #resultado li strong { font-size: 1.05em;}
      .progress-container { height: 18px; margin-bottom: 40px;}
      .progress-bar-text { font-size: 0.65em; }
-     .footer-logo { max-height: 45px; max-width: 150px;}
-     footer { padding: 25px 15px; min-height: 70px; margin-top: 50px;}
+     .footer-logo { max-width: 200px; max-height: 45px; }
+     footer { min-height: 80px; padding: 20px 15px; }
+}
+
+/* --- Video Header (Si se usa, necesita estilos) --- */
+.video-header {
+    position: relative;
+    height: 45vh; /* O la altura que desees */
+    width: 100%;
+    overflow: hidden;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background-color: #333;
+}
+
+.video-header video {
+    position: absolute;
+    top: 50%; left: 50%;
+    min-width: 100%; min-height: 100%;
+    width: auto; height: auto;
+    transform: translateX(-50%) translateY(-50%);
+    z-index: 0;
+    object-fit: cover;
 }
