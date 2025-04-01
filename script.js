@@ -1,15 +1,16 @@
 document.addEventListener('DOMContentLoaded', () => {
+    // Element references
     const preguntasContainer = document.getElementById('preguntas-container');
     const form = document.getElementById('vocational-test');
     const submitButton = document.getElementById('submit-button');
     const resultadoDiv = document.getElementById('resultado');
-    // Elementos de la barra de progreso
     const progressBar = document.getElementById('progress-bar');
     const progressText = document.getElementById('progress-text');
 
-    let totalPreguntas = 0; // Variable para almacenar el total de preguntas
+    // Global variable to store total questions count
+    let totalPreguntas = 0;
 
-    // --- Datos del Test (Sin cambios aquí, se omite por brevedad) ---
+    // --- Test Data (Careers and Questions) ---
     const carreras = {
         adminEmpresas: {
             nombreDisplay: "Administración de Empresas",
@@ -191,37 +192,41 @@ document.addEventListener('DOMContentLoaded', () => {
                 "Me apasiona el estudio de la mente y su complejidad."
             ]
         }
+        // Add more careers here if needed following the same structure
     };
 
-
-    // --- Función para barajar un array (Fisher-Yates) ---
+    // --- Helper Function: Shuffle Array (Fisher-Yates Algorithm) ---
     function shuffleArray(array) {
         for (let i = array.length - 1; i > 0; i--) {
             const j = Math.floor(Math.random() * (i + 1));
-            [array[i], array[j]] = [array[j], array[i]];
+            [array[i], array[j]] = [array[j], array[i]]; // Swap elements
         }
     }
 
-    // --- Función para Generar las Preguntas Aleatorias en el HTML ---
+    // --- Function: Render Shuffled Questions into HTML ---
     function renderizarPreguntasAleatorias() {
         let todasLasPreguntas = [];
-        totalPreguntas = 0; // Reiniciar contador
+        totalPreguntas = 0; // Reset total question count
 
+        // 1. Collect all questions, associating them with their career ID and original index
         for (const idCarrera in carreras) {
             carreras[idCarrera].preguntas.forEach((pregunta, index) => {
                 todasLasPreguntas.push({
                     texto: pregunta,
                     idCarrera: idCarrera,
-                    originalIndex: index
+                    originalIndex: index // Keep original index for the 'name' attribute
                 });
-                totalPreguntas++; // Incrementar el contador total
+                totalPreguntas++; // Increment total count
             });
         }
 
+        // 2. Shuffle the combined list of questions
         shuffleArray(todasLasPreguntas);
 
+        // 3. Generate HTML for the shuffled questions
         let htmlPreguntas = '';
         todasLasPreguntas.forEach((preguntaData, displayedIndex) => {
+            // Construct the unique name for radio buttons using career ID and original index
             const questionId = `${preguntaData.idCarrera}-q${preguntaData.originalIndex}`;
             htmlPreguntas += `
                 <div class="question">
@@ -244,107 +249,135 @@ document.addEventListener('DOMContentLoaded', () => {
             `;
         });
 
+        // 4. Insert the generated HTML into the container and update progress bar
         preguntasContainer.innerHTML = htmlPreguntas;
-        updateProgressBar(); // Actualizar barra a 0% inicialmente
+        updateProgressBar(); // Initialize progress bar at 0%
     }
 
-    // --- Función para Actualizar la Barra de Progreso ---
+    // --- Function: Update Progress Bar ---
     function updateProgressBar() {
+        // Count how many radio buttons are currently checked
         const respuestasSeleccionadas = form.querySelectorAll('input[type="radio"]:checked').length;
+        // Calculate percentage, avoiding division by zero if no questions exist
         const porcentaje = totalPreguntas > 0 ? Math.round((respuestasSeleccionadas / totalPreguntas) * 100) : 0;
 
+        // Update the width of the progress bar and the text content if elements exist
         if (progressBar && progressText) {
             progressBar.style.width = `${porcentaje}%`;
             progressText.textContent = `${porcentaje}% completado`;
         }
     }
 
-
-    // --- Función para Calcular el Resultado (Sin cambios internos, solo validación) ---
+    // --- Function: Calculate and Display Results ---
     function calcularResultado() {
         const puntajes = {};
         let totalPreguntasRespondidas = 0;
 
+        // 1. Initialize scores for each career to 0
         for (const idCarrera in carreras) {
             puntajes[idCarrera] = 0;
         }
 
+        // 2. Get all checked radio buttons
         const respuestas = form.querySelectorAll('input[type="radio"]:checked');
         totalPreguntasRespondidas = respuestas.length;
 
-        // *** Validación: Asegurarse de que todas las preguntas estén respondidas ***
+        // 3. Validate if all questions have been answered
         if (totalPreguntasRespondidas < totalPreguntas) {
-             // Si ya hay un mensaje de error, no añadir otro
-             if (!resultadoDiv.querySelector('.error-message')) {
+            // Display error message only if it's not already shown
+            if (!resultadoDiv.querySelector('.error-message')) {
                 resultadoDiv.innerHTML = `<p class="error-message" style="color: red; font-weight: bold;">Por favor, responde todas las ${totalPreguntas} preguntas para ver tu resultado.</p>`;
-                resultadoDiv.style.display = 'block';
+                resultadoDiv.style.display = 'block'; // Ensure the div is visible
+                // Scroll to the error message smoothly
                 resultadoDiv.scrollIntoView({ behavior: 'smooth', block: 'center' });
-             } else {
-                 // Si ya hay error, solo hacer scroll
-                 resultadoDiv.scrollIntoView({ behavior: 'smooth', block: 'center' });
-             }
-             return; // Detener cálculo
+            } else {
+                // If error is already visible, just scroll to it again
+                resultadoDiv.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            }
+            return; // Stop calculation
         }
-         // Si la validación pasa y había un mensaje de error, limpiarlo antes de mostrar resultado
-         if(resultadoDiv.querySelector('.error-message')){
-             resultadoDiv.innerHTML = '';
-         }
 
+        // Clear any previous error message if validation passes
+        if (resultadoDiv.querySelector('.error-message')) {
+            resultadoDiv.innerHTML = '';
+        }
 
+        // 4. Sum the scores for each career based on selected values
         respuestas.forEach(input => {
-            const name = input.name;
-            const idCarrera = name.split('-')[0];
-            const valor = parseInt(input.value);
+            const name = input.name; // e.g., "adminEmpresas-q0"
+            const idCarrera = name.split('-')[0]; // Extracts "adminEmpresas"
+            const valor = parseInt(input.value); // Gets 1, 2, or 3
 
+            // Add score if the career ID is valid
             if (puntajes.hasOwnProperty(idCarrera)) {
                 puntajes[idCarrera] += valor;
             }
         });
 
+        // 5. Find the highest score and identify all careers matching that score (handling ties)
         let mejoresCarrerasIds = [];
         let maxPuntaje = -1;
 
         for (const idCarrera in puntajes) {
-            if (puntajes[idCarrera] > maxPuntaje) {
-                maxPuntaje = puntajes[idCarrera];
-                mejoresCarrerasIds = [idCarrera];
-            } else if (puntajes[idCarrera] === maxPuntaje) {
-                mejoresCarrerasIds.push(idCarrera);
+            const puntajeActual = puntajes[idCarrera];
+
+            if (puntajeActual > maxPuntaje) {
+                // New highest score found
+                maxPuntaje = puntajeActual;
+                mejoresCarrerasIds = [idCarrera]; // Reset the list with the new top career
+            } else if (puntajeActual === maxPuntaje && maxPuntaje !== -1) {
+                // Found a tie with the current highest score
+                mejoresCarrerasIds.push(idCarrera); // Add this career to the list of ties
             }
         }
 
-        if (mejoresCarrerasIds.length > 0 && maxPuntaje >= 0) {
-            resultadoDiv.innerHTML = `<h3>Resultado del Test Vocacional</h3>`;
+        // 6. Display the results based on whether there was a single top career or a tie
+        if (mejoresCarrerasIds.length > 0 && maxPuntaje >= 0) { // Check if valid results were found
+            resultadoDiv.innerHTML = `<h3>Resultado del Test Vocacional</h3>`; // Common title
 
+            // CASE 1: Single Recommended Career
             if (mejoresCarrerasIds.length === 1) {
-                 const carreraRecomendada = carreras[mejoresCarrerasIds[0]];
+                const idCarreraUnica = mejoresCarrerasIds[0];
+                const carreraRecomendada = carreras[idCarreraUnica];
+                // Calculate max possible score for this specific career
+                const maxPosibleCarrera = carreraRecomendada.preguntas.length * 3;
                 resultadoDiv.innerHTML += `
                     <p>Basado en tus respuestas, tu perfil muestra una fuerte inclinación hacia:</p>
                     <h4>${carreraRecomendada.nombreDisplay}</h4>
                     <p>${carreraRecomendada.descripcion}</p>
-                    <p><strong>Puntaje obtenido:</strong> ${maxPuntaje} / ${carreras[mejoresCarrerasIds[0]].preguntas.length * 3}</p> <!-- Max puntaje posible para esa carrera -->
-                    <p><em>Recuerda que este test es una guía. Investiga más sobre esta y otras carreras que te interesen.</em></p>
+                    <p><strong>Puntaje obtenido:</strong> ${maxPuntaje} / ${maxPosibleCarrera}</p>
+                    <p><em>Recuerda que este test es una guía. ¡Investiga más sobre esta y otras carreras que te interesen!</em></p>
                 `;
-            } else {
-                 const maxPosiblePorCarrera = carreras[mejoresCarrerasIds[0]].preguntas.length * 3; // Asumimos que todas las carreras empatadas tienen la misma cantidad de preguntas en este test. Si no, habría que calcularlo individualmente.
-                 resultadoDiv.innerHTML += `<p>Basado en tus respuestas, tu perfil muestra inclinación hacia varias áreas con un puntaje de <strong>${maxPuntaje} / ${maxPosiblePorCarrera}</strong>:</p><ul>`;
+            }
+            // CASE 2: Tie Between Multiple Careers
+            else {
+                 // Calculate max possible score (assuming tied careers have same # questions or using the first one)
+                 const numPreguntasPrimeraEmpatada = carreras[mejoresCarrerasIds[0]].preguntas.length;
+                 const maxPosibleComun = numPreguntasPrimeraEmpatada * 3; // Adjust if necessary
+
+                 resultadoDiv.innerHTML += `<p>Basado en tus respuestas, muestras interés destacado y similar en varias áreas (Puntaje: <strong>${maxPuntaje} / ${maxPosibleComun}</strong>):</p><ul>`;
+                 // Loop through the tied career IDs and list them
                  mejoresCarrerasIds.forEach(id => {
                      resultadoDiv.innerHTML += `<li><strong>${carreras[id].nombreDisplay}:</strong> ${carreras[id].descripcion}</li>`;
                  });
-                 resultadoDiv.innerHTML += `</ul><p><em>Tienes intereses diversos. Podrías explorar estas opciones más a fondo. Recuerda que este test es una guía.</em></p>`;
+                 resultadoDiv.innerHTML += `</ul><p><em>Tienes intereses diversos y prometedores en estos campos. Te recomendamos explorar estas opciones más a fondo. ¡Este test es solo el comienzo!</em></p>`;
             }
-            resultadoDiv.scrollIntoView({ behavior: 'smooth' });
+            // Scroll smoothly to the beginning of the result section
+            resultadoDiv.scrollIntoView({ behavior: 'smooth', block: 'start' });
 
         } else {
-            resultadoDiv.innerHTML = `<p>No se pudo determinar un resultado. Asegúrate de haber respondido las preguntas.</p>`;
+            // Fallback message if no valid result could be determined
+            resultadoDiv.innerHTML = `<p>No se pudo determinar un resultado claro con las respuestas proporcionadas. Intenta responder nuevamente asegurándote de completar todas las preguntas.</p>`;
         }
-         resultadoDiv.style.display = 'block';
+
+        // Make the result section visible
+        resultadoDiv.style.display = 'block';
     }
 
-    // --- Inicialización ---
-    renderizarPreguntasAleatorias(); // Dibuja preguntas aleatorias y calcula totalPreguntas
-    submitButton.addEventListener('click', calcularResultado);
-    form.addEventListener('change', updateProgressBar); // Actualiza la barra cada vez que se cambia una respuesta
-    resultadoDiv.style.display = 'none';
+    // --- Initialization ---
+    renderizarPreguntasAleatorias(); // Generate and display questions on page load
+    submitButton.addEventListener('click', calcularResultado); // Add click listener to the submit button
+    form.addEventListener('change', updateProgressBar); // Add change listener to the form to update progress bar on selection
+    resultadoDiv.style.display = 'none'; // Hide the result section initially
 
-}); // Fin del DOMContentLoaded
+}); // End of DOMContentLoaded event listener
