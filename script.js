@@ -521,7 +521,7 @@ document.addEventListener('DOMContentLoaded', () => {
         const googleAppScriptUrl = 'https://script.google.com/macros/s/AKfycbyiwMWpW2ha7bXH-N2jwqx8uvylYRGrgOZ_ykn34RF9INl343XNRa0Gm9Hz8A7cL8SKCQ/exec'; // <-- ¡¡Pega tu URL aquí!!
         // --- ---
     
-        if (googleAppScriptUrl === 'https://script.google.com/macros/s/AKfycbyiwMWpW2ha7bXH-N2jwqx8uvylYRGrgOZ_ykn34RF9INl343XNRa0Gm9Hz8A7cL8SKCQ/exec' || !googleAppScriptUrl) {
+        if (googleAppScriptUrl === 'AQUI_VA_LA_URL_DE_TU_APPS_SCRIPT_DEPLOYED' || !googleAppScriptUrl) {
              console.error("Google Apps Script URL no está definida en script.js.");
              formStatus.textContent = 'Error de configuración: URL no definida.';
              formStatus.classList.add('error');
