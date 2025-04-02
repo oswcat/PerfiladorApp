@@ -488,7 +488,7 @@ document.addEventListener('DOMContentLoaded', () => {
         let messageText = '';
         let careerNames = careerIds.map(id => carreras[id].nombreDisplay);
 
-        messageText = ` ¡Hice el test vocacional de UNIREM y este es mi resultado! \n\n`;
+        messageText = ` ¡Hice el test vocacional de UNIREM y este es mi resultado!\n\n`;
 
         if (careerNames.length === 1) {
             messageText += `Mi perfil muestra una fuerte inclinación hacia: *${careerNames[0]}*.`;
@@ -508,73 +508,75 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
 
-    // --- Function: Handle Contact Form Submission & Track GA Lead ---
     async function handleContactFormSubmit(event) {
-        event.preventDefault(); // Prevent default form submission
+        event.preventDefault();
         if (!contactForm || !formStatus) return;
-
-        // Indicate processing
+    
         formStatus.textContent = 'Enviando...';
         formStatus.className = 'form-status'; // Reset classes
-
+    
         const formData = new FormData(contactForm);
-
-        // --- IMPORTANT: Replace this placeholder with your ACTUAL Power Automate HTTP Request URL ---
-        const powerAutomateUrl = 'YOUR_POWER_AUTOMATE_HTTP_ENDPOINT_URL';
+    
+        // --- USA LA NUEVA URL DE GOOGLE APPS SCRIPT ---
+        const googleAppScriptUrl = 'AQUI_VA_LA_URL_DE_TU_APPS_SCRIPT_DEPLOYED'; // <-- ¡¡Pega tu URL aquí!!
         // --- ---
-
-        // Basic check if the URL is still the placeholder
-        if (powerAutomateUrl === 'YOUR_POWER_AUTOMATE_HTTP_ENDPOINT_URL' || !powerAutomateUrl) {
-             console.error("Power Automate URL is not set in script.js. Please replace the placeholder.");
-             formStatus.textContent = 'Error de configuración interna. No se puede enviar.';
+    
+        if (googleAppScriptUrl === 'AQUI_VA_LA_URL_DE_TU_APPS_SCRIPT_DEPLOYED' || !googleAppScriptUrl) {
+             console.error("Google Apps Script URL no está definida en script.js.");
+             formStatus.textContent = 'Error de configuración: URL no definida.';
              formStatus.classList.add('error');
-             return; // Stop submission
+             return;
         }
-
+    
         try {
-            // Send form data to the backend (Power Automate)
-            const response = await fetch(powerAutomateUrl, {
+            // Envía los datos a Google Apps Script
+            const response = await fetch(googleAppScriptUrl, {
                 method: 'POST',
+                // Apps Script suele manejar FormData directamente, pero si falla,
+                // podrías necesitar convertir formData a otro formato o ajustar el script.
+                // Por ahora, intentamos con FormData.
                 body: formData,
-                // Headers might be needed depending on Power Automate trigger setup
-                // headers: { 'Content-Type': 'application/json' }, // Example if sending JSON
+                // Importante para evitar errores CORS raros con Apps Script a veces:
+                mode: 'cors', // Aunque Apps Script maneja CORS si está bien desplegado, ser explícito no daña
+                // No establezcas 'Content-Type' manualmente cuando uses FormData,
+                // el navegador lo hará correctamente con el 'boundary' necesario.
             });
-
-            if (response.ok) { // Check if the request was successful (e.g., status 200-299)
-                // *** GA Event: Track Lead Generation ***
-                const careerInterest = formData.get('carrera_interes') || 'Not Specified'; // Get interested career(s) from hidden input
+    
+            // Google Apps Script devuelve JSON, así que lo parseamos
+            const data = await response.json(); // Espera la respuesta JSON del script
+    
+            // Verificamos si la respuesta del script indica éxito
+            if (response.ok && data.result === 'success') {
+                // *** GA Event: Track Lead Generation (sin cambios) ***
+                const careerInterest = formData.get('carrera_interes') || 'Not Specified';
                 if (typeof gtag !== 'undefined') {
                     gtag('event', 'generate_lead', {
                         'event_category': 'Contact Form',
                         'event_label': `Vocational Test Lead - Interest: ${careerInterest}`,
-                         // 'value': 1, // Optional: Assign a value if leads have monetary worth to you
-                         // 'currency': 'MXN' // Optional: Specify currency if using value
                     });
-                    console.log(`GA Event: generate_lead - Interest: ${careerInterest}`); // Debugging
+                    console.log(`GA Event: generate_lead - Interest: ${careerInterest}`);
                 }
-
-                // Show success message to user
+    
+                // Muestra mensaje de éxito
                 formStatus.textContent = '¡Gracias! Hemos recibido tu información. Un asesor se pondrá en contacto pronto.';
                 formStatus.classList.add('success');
-                contactForm.reset(); // Clear the form fields
-                // Optionally hide the form again after successful submission
-                // setTimeout(() => { contactSection.style.display = 'none'; formStatus.textContent = ''; }, 5000);
-
+                contactForm.reset();
+    
             } else {
-                 // Handle server-side errors (e.g., Power Automate flow failed, status 4xx, 5xx)
-                 const errorText = await response.text(); // Get error details if available
-                 console.error('Server Error submitting contact form:', response.status, errorText);
-                 formStatus.textContent = `Error al enviar (${response.status}). Por favor, intenta de nuevo más tarde.`;
+                 // Hubo un error, ya sea en la red o reportado por el Apps Script
+                 console.error('Error enviando a Google Apps Script:', data.message || 'Respuesta no OK');
+                 // Muestra el mensaje de error del script si existe, o uno genérico
+                 formStatus.textContent = `Error al enviar: ${data.message || 'No se pudo completar la solicitud.'}. Intenta de nuevo.`;
                  formStatus.classList.add('error');
             }
+    
         } catch (error) {
-            // Handle network errors (e.g., no internet connection)
-            console.error('Network Error submitting contact form:', error);
-            formStatus.textContent = 'Error de conexión. Verifica tu conexión a internet e intenta de nuevo.';
+            // Error de red o al parsear JSON
+            console.error('Error de Red o Fetch:', error);
+            formStatus.textContent = 'Error de conexión o respuesta inválida. Verifica tu internet e intenta de nuevo.';
             formStatus.classList.add('error');
         }
     }
-
     // --- Initialization and Event Listeners ---
 
     // 1. Render questions when the DOM is ready
