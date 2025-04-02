@@ -1,14 +1,21 @@
 document.addEventListener('DOMContentLoaded', () => {
-    // Element references
+    // --- Element References ---
     const preguntasContainer = document.getElementById('preguntas-container');
     const form = document.getElementById('vocational-test');
     const submitButton = document.getElementById('submit-button');
     const resultadoDiv = document.getElementById('resultado');
     const progressBar = document.getElementById('progress-bar');
     const progressText = document.getElementById('progress-text');
+    // We will get the WhatsApp button dynamically after creating it in results
+    const contactSection = document.getElementById('contact-section');     // Contact Form Section
+    const contactForm = document.getElementById('contact-form');           // The actual contact form
+    const hiddenCareerInput = document.getElementById('hidden-career-interest'); // Hidden input in contact form
+    const formStatus = document.getElementById('form-status-message');    // Message area for form status
 
-    // Global variable to store total questions count
-    let totalPreguntas = 0;
+    // --- Global variables ---
+    let totalPreguntas = 0; // To store total questions count
+    let lastMilestoneReached = 0; // For tracking GA progress milestones
+    let testStarted = false; // To track if the first answer was given for GA
 
     // --- Test Data (Careers and Questions) ---
     const carreras = {
@@ -192,7 +199,6 @@ document.addEventListener('DOMContentLoaded', () => {
                 "Me apasiona el estudio de la mente y su complejidad."
             ]
         }
-        // Add more careers here if needed following the same structure
     };
 
     // --- Helper Function: Shuffle Array (Fisher-Yates Algorithm) ---
@@ -208,25 +214,26 @@ document.addEventListener('DOMContentLoaded', () => {
         let todasLasPreguntas = [];
         totalPreguntas = 0; // Reset total question count
 
-        // 1. Collect all questions, associating them with their career ID and original index
+        // 1. Collect all questions
         for (const idCarrera in carreras) {
-            carreras[idCarrera].preguntas.forEach((pregunta, index) => {
-                todasLasPreguntas.push({
-                    texto: pregunta,
-                    idCarrera: idCarrera,
-                    originalIndex: index // Keep original index for the 'name' attribute
+            if (carreras.hasOwnProperty(idCarrera)) {
+                carreras[idCarrera].preguntas.forEach((pregunta, index) => {
+                    todasLasPreguntas.push({
+                        texto: pregunta,
+                        idCarrera: idCarrera,
+                        originalIndex: index
+                    });
+                    totalPreguntas++;
                 });
-                totalPreguntas++; // Increment total count
-            });
+            }
         }
 
-        // 2. Shuffle the combined list of questions
+        // 2. Shuffle questions
         shuffleArray(todasLasPreguntas);
 
-        // 3. Generate HTML for the shuffled questions
+        // 3. Generate HTML
         let htmlPreguntas = '';
         todasLasPreguntas.forEach((preguntaData, displayedIndex) => {
-            // Construct the unique name for radio buttons using career ID and original index
             const questionId = `${preguntaData.idCarrera}-q${preguntaData.originalIndex}`;
             htmlPreguntas += `
                 <div class="question">
@@ -249,99 +256,151 @@ document.addEventListener('DOMContentLoaded', () => {
             `;
         });
 
-        // 4. Insert the generated HTML into the container and update progress bar
-        preguntasContainer.innerHTML = htmlPreguntas;
-        updateProgressBar(); // Initialize progress bar at 0%
+        // 4. Insert HTML and update progress bar initially
+        if (preguntasContainer) {
+            preguntasContainer.innerHTML = htmlPreguntas;
+        }
+        updateProgressBar(); // Call initial progress bar update
+
+        // Reset GA progress tracking if questions are re-rendered
+        lastMilestoneReached = 0;
+        testStarted = false;
     }
 
-    // --- Function: Update Progress Bar ---
+    // --- Function: Update Progress Bar & Track GA Progress ---
     function updateProgressBar() {
-        // Count how many radio buttons are currently checked
-        const respuestasSeleccionadas = form.querySelectorAll('input[type="radio"]:checked').length;
-        // Calculate percentage, avoiding division by zero if no questions exist
+        if (!form || typeof gtag === 'undefined') return; // Exit if form or gtag not available
+
+        // GA Event: Track test start on first interaction
+        if (!testStarted && form.querySelector('input[type="radio"]:checked')) {
+            testStarted = true;
+            gtag('event', 'test_start', {
+                'event_category': 'Vocational Test',
+                'event_label': 'First Question Answered'
+            });
+            console.log("GA Event: test_start"); // For debugging
+        }
+
+        // Calculate progress
+        const answeredQuestions = new Set();
+        form.querySelectorAll('input[type="radio"]:checked').forEach(radio => {
+            answeredQuestions.add(radio.name);
+        });
+        const respuestasSeleccionadas = answeredQuestions.size;
         const porcentaje = totalPreguntas > 0 ? Math.round((respuestasSeleccionadas / totalPreguntas) * 100) : 0;
 
-        // Update the width of the progress bar and the text content if elements exist
+        // Update visual progress bar
         if (progressBar && progressText) {
             progressBar.style.width = `${porcentaje}%`;
             progressText.textContent = `${porcentaje}% completado`;
         }
+
+        // GA Event: Track Progress Milestones
+        const milestones = [25, 50, 75, 100]; // Define milestones
+        for (const milestone of milestones) {
+            // Check if current percentage hits a milestone AND it's a *new* milestone
+            if (porcentaje >= milestone && lastMilestoneReached < milestone) {
+                gtag('event', 'test_progress', {
+                    'event_category': 'Vocational Test',
+                    'event_label': `Progress Reached - ${milestone}%`,
+                    'value': milestone // Send percentage as value for potential analysis
+                });
+                console.log(`GA Event: test_progress - ${milestone}%`); // For debugging
+                lastMilestoneReached = milestone; // Update the last milestone reached
+                break; // Fire only one milestone event per update to avoid duplicates if progress jumps significantly
+            }
+        }
+
+        // Reset GA tracking if user somehow un-answers all questions (unlikely with radios)
+        if(respuestasSeleccionadas === 0) {
+             lastMilestoneReached = 0;
+             testStarted = false;
+        }
     }
 
-    // --- Function: Calculate and Display Results ---
+    // --- Function: Calculate and Display Results & Track GA Completion ---
     function calcularResultado() {
+        if (!form || !resultadoDiv) return;
+
         const puntajes = {};
         let totalPreguntasRespondidas = 0;
 
-        // 1. Initialize scores for each career to 0
+        // 1. Initialize scores
         for (const idCarrera in carreras) {
-            puntajes[idCarrera] = 0;
-        }
-
-        // 2. Get all checked radio buttons
-        const respuestas = form.querySelectorAll('input[type="radio"]:checked');
-        totalPreguntasRespondidas = respuestas.length;
-
-        // 3. Validate if all questions have been answered
-        if (totalPreguntasRespondidas < totalPreguntas) {
-            // Display error message only if it's not already shown
-            if (!resultadoDiv.querySelector('.error-message')) {
-                resultadoDiv.innerHTML = `<p class="error-message" style="color: red; font-weight: bold;">Por favor, responde todas las ${totalPreguntas} preguntas para ver tu resultado.</p>`;
-                resultadoDiv.style.display = 'block'; // Ensure the div is visible
-                // Scroll to the error message smoothly
-                resultadoDiv.scrollIntoView({ behavior: 'smooth', block: 'center' });
-            } else {
-                // If error is already visible, just scroll to it again
-                resultadoDiv.scrollIntoView({ behavior: 'smooth', block: 'center' });
+             if (carreras.hasOwnProperty(idCarrera)) {
+                puntajes[idCarrera] = 0;
             }
-            return; // Stop calculation
         }
 
-        // Clear any previous error message if validation passes
-        if (resultadoDiv.querySelector('.error-message')) {
-            resultadoDiv.innerHTML = '';
+        // 2. Get answers and count unique answered questions
+        const respuestas = form.querySelectorAll('input[type="radio"]:checked');
+        const answeredQuestionsNames = new Set(Array.from(respuestas).map(r => r.name));
+        totalPreguntasRespondidas = answeredQuestionsNames.size;
+
+        // 3. Validation: Check if all questions are answered
+        if (totalPreguntasRespondidas < totalPreguntas) {
+            resultadoDiv.innerHTML = `<p class="error-message">Por favor, responde todas las ${totalPreguntas} preguntas para ver tu resultado.</p>`;
+            resultadoDiv.style.display = 'block';
+            if (contactSection) contactSection.style.display = 'none';
+             const existingShareButton = document.getElementById('share-whatsapp-button');
+             if(existingShareButton) existingShareButton.style.display = 'none';
+            resultadoDiv.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            return; // Stop execution
         }
 
-        // 4. Sum the scores for each career based on selected values
+        // --- If validation passes, proceed to calculate and track GA ---
+
+        // 4. Sum scores based on answers
         respuestas.forEach(input => {
-            const name = input.name; // e.g., "adminEmpresas-q0"
-            const idCarrera = name.split('-')[0]; // Extracts "adminEmpresas"
-            const valor = parseInt(input.value); // Gets 1, 2, or 3
-
-            // Add score if the career ID is valid
+            const name = input.name;
+            const idCarrera = name.split('-')[0];
+            const valor = parseInt(input.value, 10);
             if (puntajes.hasOwnProperty(idCarrera)) {
                 puntajes[idCarrera] += valor;
             }
         });
 
-        // 5. Find the highest score and identify all careers matching that score (handling ties)
+        // 5. Find the best career(s) based on score (including ties)
         let mejoresCarrerasIds = [];
         let maxPuntaje = -1;
-
         for (const idCarrera in puntajes) {
-            const puntajeActual = puntajes[idCarrera];
-
-            if (puntajeActual > maxPuntaje) {
-                // New highest score found
-                maxPuntaje = puntajeActual;
-                mejoresCarrerasIds = [idCarrera]; // Reset the list with the new top career
-            } else if (puntajeActual === maxPuntaje && maxPuntaje !== -1) {
-                // Found a tie with the current highest score
-                mejoresCarrerasIds.push(idCarrera); // Add this career to the list of ties
+             if (puntajes.hasOwnProperty(idCarrera)) {
+                const puntajeActual = puntajes[idCarrera];
+                if (puntajeActual > maxPuntaje) {
+                    maxPuntaje = puntajeActual;
+                    mejoresCarrerasIds = [idCarrera]; // New highest score
+                } else if (puntajeActual === maxPuntaje && maxPuntaje !== -1) {
+                    mejoresCarrerasIds.push(idCarrera); // Tie with current highest
+                }
             }
         }
 
-        // 6. Display the results based on whether there was a single top career or a tie
-        if (mejoresCarrerasIds.length > 0 && maxPuntaje >= 0) { // Check if valid results were found
-            resultadoDiv.innerHTML = `<h3>Resultado del Test Vocacional</h3>`; // Common title
+        // 6. Prepare and Display the results
+        if (mejoresCarrerasIds.length > 0 && maxPuntaje >= 0) {
+
+             // *** GA Event: Track Test Completion ***
+             // Create a user-friendly string of resulting careers (pipe-separated for potential multi-select filtering in GA)
+             const resultNames = mejoresCarrerasIds.map(id => carreras[id].nombreDisplay).join(' | ');
+             if (typeof gtag !== 'undefined') { // Check if gtag is loaded
+                gtag('event', 'test_complete', {
+                    'event_category': 'Vocational Test',
+                    'event_label': `Result: ${resultNames}`, // Send resulting careers names
+                    'value': mejoresCarrerasIds.length,       // Number of resulting careers (1 for single, >1 for tie) might be useful
+                    'result_careers': resultNames            // Custom parameter if needed for dimensions/audiences
+                });
+                console.log(`GA Event: test_complete - Result: ${resultNames}`); // For debugging
+             }
+
+            // --- Prepare Result HTML ---
+            let resultContentHTML = ''; // Holds the dynamic part of the result text/list
+            let fullResultHTML = '';    // To rebuild the entire result div content including title and button
 
             // CASE 1: Single Recommended Career
             if (mejoresCarrerasIds.length === 1) {
                 const idCarreraUnica = mejoresCarrerasIds[0];
                 const carreraRecomendada = carreras[idCarreraUnica];
-                // Calculate max possible score for this specific career
-                const maxPosibleCarrera = carreraRecomendada.preguntas.length * 3;
-                resultadoDiv.innerHTML += `
+                const maxPosibleCarrera = carreraRecomendada.preguntas.length * 3; // Calculate max score for this specific career
+                resultContentHTML = `
                     <p>Basado en tus respuestas, tu perfil muestra una fuerte inclinación hacia:</p>
                     <h4>${carreraRecomendada.nombreDisplay}</h4>
                     <p>${carreraRecomendada.descripcion}</p>
@@ -351,33 +410,195 @@ document.addEventListener('DOMContentLoaded', () => {
             }
             // CASE 2: Tie Between Multiple Careers
             else {
-                 // Calculate max possible score (assuming tied careers have same # questions or using the first one)
+                 // Assume all careers have the same number of questions for max score calculation in case of a tie
                  const numPreguntasPrimeraEmpatada = carreras[mejoresCarrerasIds[0]].preguntas.length;
-                 const maxPosibleComun = numPreguntasPrimeraEmpatada * 3; // Adjust if necessary
-
-                 resultadoDiv.innerHTML += `<p>Basado en tus respuestas, muestras interés destacado y similar en varias áreas (Puntaje: <strong>${maxPuntaje} / ${maxPosibleComun}</strong>):</p><ul>`;
-                 // Loop through the tied career IDs and list them
+                 const maxPosibleComun = numPreguntasPrimeraEmpatada * 3;
+                 resultContentHTML = `<p>Basado en tus respuestas, muestras interés destacado y similar en varias áreas (Puntaje: <strong>${maxPuntaje} / ${maxPosibleComun}</strong>):</p><ul>`;
                  mejoresCarrerasIds.forEach(id => {
-                     resultadoDiv.innerHTML += `<li><strong>${carreras[id].nombreDisplay}:</strong> ${carreras[id].descripcion}</li>`;
+                     resultContentHTML += `<li><strong>${carreras[id].nombreDisplay}:</strong> ${carreras[id].descripcion}</li>`;
                  });
-                 resultadoDiv.innerHTML += `</ul><p><em>Tienes intereses diversos y prometedores en estos campos. Te recomendamos explorar estas opciones más a fondo. ¡Este test es solo el comienzo!</em></p>`;
+                 resultContentHTML += `</ul><p><em>Tienes intereses diversos y prometedores en estos campos. Te recomendamos explorar estas opciones más a fondo. ¡Este test es solo el comienzo!</em></p>`;
             }
-            // Scroll smoothly to the beginning of the result section
-            resultadoDiv.scrollIntoView({ behavior: 'smooth', block: 'start' });
+
+            // --- Build the Full Result Div Content (including share button) ---
+            fullResultHTML = `
+                <h3>Resultado del Test Vocacional</h3>
+                ${resultContentHTML}
+                <button type="button" id="share-whatsapp-button" class="share-button" style="display: none;">
+                     <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-whatsapp" viewBox="0 0 16 16" style="margin-right: 8px; vertical-align: middle;">
+                         <path d="M13.601 2.326A7.85 7.85 0 0 0 7.994 0C3.627 0 .068 3.558.064 7.926c0 1.399.366 2.76 1.057 3.965L0 16l4.204-1.102a7.9 7.9 0 0 0 3.79.965h.004c4.368 0 7.926-3.558 7.93-7.93A7.9 7.9 0 0 0 13.6 2.326zM7.994 14.521a6.6 6.6 0 0 1-3.356-.92l-.24-.144-2.494.654.666-2.433-.156-.251a6.56 6.56 0 0 1-1.007-3.505c0-3.626 2.957-6.584 6.591-6.584a6.56 6.56 0 0 1 4.66 1.931 6.56 6.56 0 0 1 1.928 4.66c-.004 3.639-2.961 6.592-6.592 6.592m3.615-4.934c-.197-.099-1.17-.578-1.353-.646-.182-.065-.315-.099-.445.099-.133.197-.513.646-.627.775-.114.133-.232.148-.43.05-.197-.1-.836-.308-1.592-.985-.59-.525-.985-1.175-1.103-1.372-.114-.198-.011-.304.088-.403.087-.088.197-.232.296-.346.1-.114.133-.198.198-.33.065-.134.034-.248-.015-.347-.05-.099-.445-1.076-.612-1.47-.16-.389-.323-.335-.445-.34-.114-.007-.247-.007-.38-.007a.73.73 0 0 0-.529.247c-.182.198-.691.677-.691 1.654s.71 1.916.81 2.049c.098.133 1.394 2.132 3.383 2.992.47.205.84.326 1.129.418.475.152.904.129 1.246.08.38-.058 1.171-.48 1.338-0.943.164-.464.164-.86.114-.943-.049-.084-.182-.133-.38-.232z"/>
+                     </svg>
+                     Compartir Resultado en WhatsApp
+                 </button>
+            `;
+
+            // --- Update the DOM ---
+            resultadoDiv.innerHTML = fullResultHTML; // Set the complete HTML for the results section
+            resultadoDiv.style.display = 'block';     // Make the results section visible
+
+            // --- Setup Share Button (now that it exists in the DOM) ---
+            const currentShareButton = resultadoDiv.querySelector('#share-whatsapp-button');
+            if (currentShareButton) {
+                currentShareButton.onclick = () => {
+                    // *** GA Event: Track WhatsApp Share Click ***
+                    if (typeof gtag !== 'undefined') {
+                         gtag('event', 'share', {
+                              'method': 'WhatsApp',                  // Standard GA4 share parameter
+                              'content_type': 'Vocational Test Result', // Describe what's being shared
+                              'item_id': resultNames                // Pass career names as item ID (useful for analysis)
+                         });
+                         console.log(`GA Event: share - Method: WhatsApp, Content: ${resultNames}`); // Debugging
+                    }
+                    compartirWhatsApp(mejoresCarrerasIds, maxPuntaje); // Call the original share function
+                };
+                currentShareButton.style.display = 'inline-flex'; // Make the button visible
+            }
+
+            // --- Show Contact Form ---
+            if (contactSection && hiddenCareerInput) {
+                const recommendedCareerNames = mejoresCarrerasIds.map(id => carreras[id].nombreDisplay).join(', ');
+                hiddenCareerInput.value = recommendedCareerNames; // Pre-fill hidden input for the form
+                contactSection.style.display = 'block';           // Show the contact form section
+            }
+
+            // --- Scroll to results title for better UX ---
+            const resultTitle = resultadoDiv.querySelector('h3');
+            if (resultTitle) {
+                 resultTitle.scrollIntoView({ behavior: 'smooth', block: 'start' });
+            }
 
         } else {
-            // Fallback message if no valid result could be determined
-            resultadoDiv.innerHTML = `<p>No se pudo determinar un resultado claro con las respuestas proporcionadas. Intenta responder nuevamente asegurándote de completar todas las preguntas.</p>`;
+             // Fallback if no clear result could be determined (should be rare if validation works)
+             resultadoDiv.innerHTML = `<p class="error-message">No se pudo determinar un resultado claro. Por favor, asegúrate de responder todas las preguntas e intenta de nuevo.</p>`;
+             resultadoDiv.style.display = 'block';
+             // Ensure contact form and any potential share button are hidden
+             if (contactSection) contactSection.style.display = 'none';
+             const existingShareButton = document.getElementById('share-whatsapp-button');
+             if(existingShareButton) existingShareButton.style.display = 'none';
         }
-
-        // Make the result section visible
-        resultadoDiv.style.display = 'block';
     }
 
-    // --- Initialization ---
-    renderizarPreguntasAleatorias(); // Generate and display questions on page load
-    submitButton.addEventListener('click', calcularResultado); // Add click listener to the submit button
-    form.addEventListener('change', updateProgressBar); // Add change listener to the form to update progress bar on selection
-    resultadoDiv.style.display = 'none'; // Hide the result section initially
 
-}); // End of DOMContentLoaded event listener
+    // --- Function: Share Results on WhatsApp ---
+    function compartirWhatsApp(careerIds, score) {
+         // --- IMPORTANT: Verify this URL points to your actual live test page ---
+         const testUrl = 'https://oswcat.github.io/PerfiladorApp/'; // Example URL from original script
+         // --- ---
+
+        let messageText = '';
+        let careerNames = careerIds.map(id => carreras[id].nombreDisplay);
+
+        messageText = ` ¡Hice el test vocacional de UNIREM y este es mi resultado! \n\n`;
+
+        if (careerNames.length === 1) {
+            messageText += `Mi perfil muestra una fuerte inclinación hacia: *${careerNames[0]}*.`;
+        } else {
+            messageText += `Muestro interés destacado en varias áreas:\n - *${careerNames.join('*\n - *')}*`;
+        }
+
+        messageText += `\n\n ¡Descubre tu vocación también!\n${testUrl}`;
+        // Adding UNIREM contact details from original script
+        messageText += `\n\n Encuentra más sobre UNIREM en Facebook, Instagram y TikTok: @UNIREM.MX`;
+        messageText += `\n\n Llamanos al 5550370100 o envía un WhatsApp al 5546190122 para más información.`;
+
+        const encodedMessage = encodeURIComponent(messageText);
+        const whatsappUrl = `https://wa.me/?text=${encodedMessage}`;
+
+        window.open(whatsappUrl, '_blank'); // Open WhatsApp in a new tab
+    }
+
+
+    // --- Function: Handle Contact Form Submission & Track GA Lead ---
+    async function handleContactFormSubmit(event) {
+        event.preventDefault(); // Prevent default form submission
+        if (!contactForm || !formStatus) return;
+
+        // Indicate processing
+        formStatus.textContent = 'Enviando...';
+        formStatus.className = 'form-status'; // Reset classes
+
+        const formData = new FormData(contactForm);
+
+        // --- IMPORTANT: Replace this placeholder with your ACTUAL Power Automate HTTP Request URL ---
+        const powerAutomateUrl = 'YOUR_POWER_AUTOMATE_HTTP_ENDPOINT_URL';
+        // --- ---
+
+        // Basic check if the URL is still the placeholder
+        if (powerAutomateUrl === 'YOUR_POWER_AUTOMATE_HTTP_ENDPOINT_URL' || !powerAutomateUrl) {
+             console.error("Power Automate URL is not set in script.js. Please replace the placeholder.");
+             formStatus.textContent = 'Error de configuración interna. No se puede enviar.';
+             formStatus.classList.add('error');
+             return; // Stop submission
+        }
+
+        try {
+            // Send form data to the backend (Power Automate)
+            const response = await fetch(powerAutomateUrl, {
+                method: 'POST',
+                body: formData,
+                // Headers might be needed depending on Power Automate trigger setup
+                // headers: { 'Content-Type': 'application/json' }, // Example if sending JSON
+            });
+
+            if (response.ok) { // Check if the request was successful (e.g., status 200-299)
+                // *** GA Event: Track Lead Generation ***
+                const careerInterest = formData.get('carrera_interes') || 'Not Specified'; // Get interested career(s) from hidden input
+                if (typeof gtag !== 'undefined') {
+                    gtag('event', 'generate_lead', {
+                        'event_category': 'Contact Form',
+                        'event_label': `Vocational Test Lead - Interest: ${careerInterest}`,
+                         // 'value': 1, // Optional: Assign a value if leads have monetary worth to you
+                         // 'currency': 'MXN' // Optional: Specify currency if using value
+                    });
+                    console.log(`GA Event: generate_lead - Interest: ${careerInterest}`); // Debugging
+                }
+
+                // Show success message to user
+                formStatus.textContent = '¡Gracias! Hemos recibido tu información. Un asesor se pondrá en contacto pronto.';
+                formStatus.classList.add('success');
+                contactForm.reset(); // Clear the form fields
+                // Optionally hide the form again after successful submission
+                // setTimeout(() => { contactSection.style.display = 'none'; formStatus.textContent = ''; }, 5000);
+
+            } else {
+                 // Handle server-side errors (e.g., Power Automate flow failed, status 4xx, 5xx)
+                 const errorText = await response.text(); // Get error details if available
+                 console.error('Server Error submitting contact form:', response.status, errorText);
+                 formStatus.textContent = `Error al enviar (${response.status}). Por favor, intenta de nuevo más tarde.`;
+                 formStatus.classList.add('error');
+            }
+        } catch (error) {
+            // Handle network errors (e.g., no internet connection)
+            console.error('Network Error submitting contact form:', error);
+            formStatus.textContent = 'Error de conexión. Verifica tu conexión a internet e intenta de nuevo.';
+            formStatus.classList.add('error');
+        }
+    }
+
+    // --- Initialization and Event Listeners ---
+
+    // 1. Render questions when the DOM is ready
+    renderizarPreguntasAleatorias();
+
+    // 2. Add listener to the main test submit button
+    if (submitButton) {
+        submitButton.addEventListener('click', calcularResultado);
+    }
+
+    // 3. Add listener to the form itself to track changes for progress bar/GA events
+    if (form) {
+        // 'change' event bubbles up from radio buttons
+        form.addEventListener('change', updateProgressBar);
+    }
+
+    // 4. Add listener for the contact form submission
+    if (contactForm) {
+        contactForm.addEventListener('submit', handleContactFormSubmit);
+    }
+
+    // 5. Initial state: Hide results and contact form sections
+    // The share button is hidden via style="display:none" in the generated HTML initially and shown later
+    if (resultadoDiv) resultadoDiv.style.display = 'none';
+    if (contactSection) contactSection.style.display = 'none';
+
+}); // End of DOMContentLoaded wrapper

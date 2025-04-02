@@ -355,3 +355,314 @@ footer {
     z-index: 0;
     object-fit: cover;
 }
+/* ================================================== */
+/* START: Paste these updated/confirmed styles into your style.css */
+/* ================================================== */
+
+
+/* --- Área de Resultado --- */
+#resultado {
+    margin-top: 40px;
+    margin-bottom: 40px;
+    padding: 35px 40px;
+    background-color: #ffffff; /* White background */
+    border: 1px solid #dee2e6; /* Light grey border */
+    border-radius: 15px;
+    text-align: center;
+    display: none; /* Hidden initially */
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08); /* Soft shadow */
+}
+
+/* Styles for content within the result area */
+#resultado h3 { color: #0a3d62; margin-bottom: 20px; font-size: 1.7em; }
+#resultado h4 { color: #0d6efd; margin-top: 5px; margin-bottom: 15px; font-size: 1.5em; font-weight: 600; }
+#resultado p { font-size: 1.1em; color: #212529; margin-bottom: 12px; line-height: 1.6; }
+#resultado p strong { color: #0d6efd; }
+#resultado ul { list-style: none; padding: 0; margin-top: 20px; margin-bottom: 20px; }
+#resultado li {
+    margin-bottom: 18px; padding: 15px 20px; background-color: #f8f9fa;
+    border-left: 5px solid #0d6efd;
+    border-radius: 8px; text-align: left;
+    box-shadow: 0 2px 5px rgba(0,0,0,0.05);
+}
+#resultado li strong { color: #0a3d62; display: block; margin-bottom: 8px; font-size: 1.1em;}
+#resultado p em { color: #0b5ed7; font-size: 1em; display: block; margin-top: 20px; }
+
+/* --- *** CONFIRMED: Error Message Style (Should be Red) *** --- */
+/* This rule targets the <p class="error-message"> inside #resultado */
+#resultado .error-message {
+    color: #dc3545; /* Bootstrap's standard danger red */
+    font-weight: bold;
+    margin-top: 15px;
+    margin-bottom: 10px; /* Add some space below */
+    font-size: 1.05em; /* Slightly larger */
+    border: 1px dashed #dc3545; /* Optional: add a dashed border */
+    padding: 10px;             /* Optional: add padding */
+    border-radius: 8px;         /* Optional: round corners */
+    background-color: #f8d7da; /* Optional: light red background */
+}
+
+/* --- *** UPDATED: Botón Compartir WhatsApp *** --- */
+/* More stylized WhatsApp button */
+.share-button {
+    display: inline-flex; /* Align icon and text */
+    align-items: center;
+    justify-content: center;
+    margin-top: 30px; /* Space above */
+    padding: 12px 28px; /* Adjusted padding */
+    font-size: 1.05em; /* Slightly larger font */
+    font-weight: 600; /* Bolder */
+    color: #ffffff; /* White text */
+    background-color: #25D366; /* WhatsApp Green */
+    border: 1px solid #1DAE51; /* Darker green border */
+    border-radius: 50px; /* Fully rounded like submit button */
+    cursor: pointer;
+    transition: all 0.3s ease;
+    box-shadow: 0 4px 12px rgba(37, 211, 102, 0.3); /* Softer shadow */
+    text-decoration: none; /* Remove underline if it's an anchor */
+    gap: 10px; /* Space between icon and text */
+}
+
+.share-button:hover {
+    background-color: #1ebe5a; /* Slightly lighter green on hover */
+    border-color: #25D366;
+    box-shadow: 0 6px 16px rgba(37, 211, 102, 0.4);
+    transform: translateY(-2px); /* Lift effect */
+}
+
+.share-button svg { /* Style for the embedded icon */
+    /* vertical-align: middle; -- Already handled by flex alignment */
+    width: 18px; /* Slightly larger icon */
+    height: 18px;
+    fill: currentColor; /* Ensures icon color matches text (white) */
+}
+
+
+/* --- Sección de Contacto --- */
+#contact-section {
+    margin-top: 50px;
+    margin-bottom: 40px;
+    padding: 35px 40px;
+    background-color: #ffffff;
+    border: 1px solid #dee2e6;
+    border-radius: 15px;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
+    text-align: center;
+}
+
+#contact-section h3 {
+    color: #0a3d62;
+    margin-bottom: 10px;
+    font-size: 1.7em;
+}
+
+#contact-section .contact-intro {
+    color: #495057;
+    margin-bottom: 35px;
+    font-size: 1.1em;
+    max-width: 600px;
+    margin-left: auto;
+    margin-right: auto;
+}
+
+#contact-form {
+    max-width: 600px;
+    margin: 0 auto;
+    text-align: left;
+}
+
+.form-group {
+    margin-bottom: 25px;
+    position: relative; /* Needed for potential icon additions later */
+}
+
+.form-label {
+    display: block;
+    margin-bottom: 8px;
+    color: #0a3d62;
+    font-weight: 600;
+    font-size: 0.95em;
+}
+
+/* --- *** UPDATED: Contact Form Inputs/Textarea Styling *** --- */
+.form-input,
+.form-textarea {
+    width: 100%;
+    padding: 14px 18px; /* Slightly more padding */
+    border: 1px solid #ced4da;
+    border-radius: 8px; /* Consistent rounded corners */
+    font-size: 1em;
+    font-family: 'Poppins', sans-serif;
+    transition: border-color 0.2s ease, box-shadow 0.2s ease;
+    background-color: #f8f9fa; /* Very light grey background */
+    color: #212529;
+    line-height: 1.6; /* Improve text line spacing */
+}
+
+.form-input::placeholder,
+.form-textarea::placeholder {
+    color: #6c757d;
+    opacity: 0.8; /* Slightly faded placeholder */
+}
+
+/* Enhanced focus style */
+.form-input:focus,
+.form-textarea:focus {
+    border-color: #0d6efd; /* Blue border on focus */
+    background-color: #fff; /* White background on focus */
+    outline: 0;
+    box-shadow: 0 0 0 0.2rem rgba(13, 110, 253, 0.25), /* Standard blue glow */
+                inset 0 1px 2px rgba(0,0,0,0.075); /* Subtle inner shadow */
+}
+
+.form-textarea {
+    resize: vertical;
+    min-height: 120px; /* Slightly taller */
+}
+
+/* --- Contact Submit Button (uses .submit-button base) --- */
+.contact-submit {
+    /* It inherits base styles from .submit-button */
+    margin-top: 10px;
+    min-width: 200px;
+    width: auto;
+    font-size: 1.15em;
+    padding: 14px 30px;
+}
+
+/* --- Form Status Messages --- */
+.form-status {
+    margin-top: 20px;
+    font-size: 0.95em;
+    font-weight: 500;
+    text-align: center;
+    padding: 10px;
+    border-radius: 5px;
+    display: none; /* Hide initially, show on message */
+}
+.form-status.success {
+    color: #0f5132; /* Darker green text */
+    background-color: #d1e7dd; /* Light green background */
+    border: 1px solid #badbcc;
+    display: block; /* Show when class is added */
+}
+.form-status.error {
+    color: #842029; /* Darker red text */
+    background-color: #f8d7da; /* Light red background */
+    border: 1px solid #f5c2c7;
+    display: block; /* Show when class is added */
+}
+
+
+/* ================================================== */
+/* END: Pasting updated styles */
+/* ================================================== */
+
+/* --- Media Queries (Ensure relevant parts are updated too) --- */
+
+/* Example: Make sure contact form adjustments are still sensible */
+@media (max-width: 768px) {
+    /* ... other rules ... */
+    #resultado { padding: 30px 25px; }
+    #contact-section { padding: 30px 25px; }
+    .contact-submit { font-size: 1.1em; padding: 12px 25px; }
+    .share-button { padding: 10px 22px; font-size: 1em; } /* Adjust WhatsApp button padding */
+    /* ... other rules ... */
+}
+
+@media (max-width: 480px) {
+     /* ... other rules ... */
+     #resultado { padding: 25px 20px; }
+     #resultado h3 { font-size: 1.5em; }
+     #resultado h4 { font-size: 1.3em; }
+     #resultado p { font-size: 1em; }
+     #resultado .error-message { font-size: 0.95em; padding: 8px;} /* Adjust error message style */
+
+     #contact-section { padding: 25px 20px; }
+     #contact-section h3 { font-size: 1.5em; }
+     .contact-intro { font-size: 1em; }
+     .form-input, .form-textarea { padding: 12px 15px; } /* Adjust padding */
+     .contact-submit { width: 100%; font-size: 1.1em; padding: 14px 20px; }
+     .share-button { width: 90%; margin-left: auto; margin-right: auto; padding: 12px 20px; font-size: 1em;} /* Make WhatsApp button wider */
+     /* ... other rules ... */
+}
+
+/* --- Botón de Resultado (y otros botones principales) --- */
+.submit-button {
+    display: block; /* Asegura que ocupe su propio espacio y permita margin: auto */
+    width: auto;    /* El ancho se ajustará al contenido y padding */
+    min-width: 250px; /* Un ancho mínimo para el botón principal */
+    margin: 60px auto 30px auto; /* Margen por defecto (más espacio para el botón principal) */
+    padding: 16px 35px; /* Padding generoso */
+    font-size: 1.3em;  /* Tamaño de fuente principal */
+    font-weight: 600;
+    color: #ffffff; /* Texto blanco */
+    background-image: linear-gradient(to right, #0d6efd, #0a58ca); /* Gradiente azul */
+    border: none;
+    border-radius: 50px; /* Bordes totalmente redondeados (píldora) */
+    cursor: pointer;
+    transition: all 0.3s ease;
+    box-shadow: 0 4px 15px rgba(13, 110, 253, 0.35); /* Sombra azul */
+    text-align: center;
+    text-decoration: none; /* En caso de usarlo como enlace */
+}
+
+.submit-button:hover {
+    background-image: linear-gradient(to right, #0a58ca, #0b5ed7); /* Gradiente más oscuro */
+    box-shadow: 0 6px 20px rgba(13, 110, 253, 0.45); /* Sombra más pronunciada */
+    transform: translateY(-3px); /* Efecto de elevación */
+}
+
+/* --- Ajustes específicos para el botón del formulario de contacto --- */
+.contact-submit {
+    /* Hereda todo de .submit-button, solo ajustamos lo necesario */
+
+    /* 1. Ajustar margen para el contexto del formulario */
+    margin: 35px auto 20px auto; /* Menos margen vertical, centrado horizontalmente */
+
+    /* 2. Opcional: Hacerlo ligeramente más pequeño que el botón principal */
+    font-size: 1.15em;       /* Un poco más pequeño */
+    padding: 14px 30px;      /* Padding ligeramente reducido */
+    min-width: 200px;        /* Ancho mínimo un poco menor */
+
+    /* Width: auto; ya está heredado y es correcto */
+}
+
+/* --- Ajustes en Media Queries (ya existentes, pero revisamos .contact-submit) --- */
+
+/* ... (otras reglas de media query) ... */
+
+@media (max-width: 768px) {
+    /* ... otros estilos ... */
+    .submit-button { /* Ajustes generales para botones principales en tablet */
+         min-width: 220px;
+         font-size: 1.2em;
+         padding: 14px 30px;
+    }
+    .contact-submit { /* Ajustes específicos para el botón de contacto en tablet */
+        font-size: 1.1em;
+        padding: 12px 25px;
+        min-width: 180px; /* Ajuste coherente con la reducción general */
+        margin-top: 30px; /* Ajustar si es necesario */
+    }
+     /* ... otros estilos ... */
+}
+
+ @media (max-width: 480px) {
+     /* ... otros estilos ... */
+     .submit-button { /* Ajustes generales para botones principales en móvil */
+         width: 90%; /* Más ancho en móvil */
+         min-width: 0;
+         font-size: 1.15em;
+         padding: 14px 20px;
+         margin: 50px auto 25px auto;
+     }
+      .contact-submit { /* Ajustes específicos para el botón de contacto en móvil */
+          width: 100%; /* Hacerlo full-width dentro del form en móvil */
+          font-size: 1.1em; /* Mantener ligeramente más pequeño */
+          padding: 14px 20px; /* Padding similar al principal en móvil */
+          margin: 30px auto 20px auto; /* Ajustar margen vertical */
+          min-width: 0; /* No necesita min-width si es width: 100% */
+      }
+     /* ... otros estilos ... */
+ }
