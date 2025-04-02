@@ -534,7 +534,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 method: 'POST',
                 // Apps Script suele manejar FormData directamente, pero si falla,
                 // podrías necesitar convertir formData a otro formato o ajustar el script.
-                // Por ahora, intentamos con FormData.
+
                 body: formData,
                 // Importante para evitar errores CORS raros con Apps Script a veces:
                 mode: 'cors', // Aunque Apps Script maneja CORS si está bien desplegado, ser explícito no daña
