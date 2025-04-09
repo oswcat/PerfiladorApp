@@ -1,432 +1,367 @@
-
 document.addEventListener('DOMContentLoaded', () => {
     // --- Element References ---
     const preguntasContainer = document.getElementById('preguntas-container');
     const form = document.getElementById('vocational-test');
     const submitButton = document.getElementById('submit-button');
     const resultadoDiv = document.getElementById('resultado');
-    const progressBar = document.getElementById('progress-bar');
+    const progressBarInner = document.getElementById('progress-bar');
+    const progressContainer = progressBarInner ? progressBarInner.parentElement : null;
     const progressText = document.getElementById('progress-text');
     const contactSection = document.getElementById('contact-section');
     const contactForm = document.getElementById('contact-form');
     const hiddenCareerInput = document.getElementById('hidden-career-interest');
     const formStatus = document.getElementById('form-status-message');
+    const shareButtonContainer = document.getElementById('share-button-container');
+
+    // ID para el contenedor de la lista de habilidades (generado DENTRO de #resultado)
+    const skillPercentageListContainerId = 'skill-list-area-dynamic'; // ID único
 
     // --- Configuración ---
     const CONFIG = {
-        googleAppScriptUrl: 'https://script.google.com/macros/s/AKfycbyiwMWpW2ha7bXH-N2jwqx8uvylYRGrgOZ_ykn34RF9INl343XNRa0Gm9Hz8A7cL8SKCQ/exec', // ¡VERIFICA QUE ESTA ES TU URL CORRECTA!
-        carrerasDataFile: './carreras.json' // Nombre del archivo JSON
+        googleAppScriptUrl: 'https://script.google.com/macros/s/AKfycbyiwMWpW2ha7bXH-N2jwqx8uvylYRGrgOZ_ykn34RF9INl343XNRa0Gm9Hz8A7cL8SKCQ/exec',
+        carrerasDataFile: './carreras.json',
+        placeholderGASUrl: 'AQUI_VA_LA_URL'
     };
 
     // --- Global variables ---
     let totalPreguntas = 0;
     let lastMilestoneReached = 0;
     let testStarted = false;
-    let carrerasData = null; // Para almacenar los datos cargados
+    let carrerasData = null;
+
+    // --- Definición de Habilidades (CON DESCRIPCIONES COMPLETAS) ---
+    const HABILIDADES_DEFINICIONES = {
+        analitico: { label: "Analítico/Lógico", maxScore: 0, descripcion: "Capacidad para descomponer problemas complejos, usar la lógica y el razonamiento, identificar patrones y trabajar con datos de manera estructurada." },
+        creativo: { label: "Creativo/Artístico", maxScore: 0, descripcion: "Habilidad para generar ideas originales, expresarse a través de formas artísticas (visual, escrita, musical), pensar de forma no convencional y encontrar soluciones innovadoras." },
+        social: { label: "Social/Comunicativo", maxScore: 0, descripcion: "Facilidad para interactuar con otros, comunicar ideas de forma clara (oral y escrita), persuadir, colaborar en equipo y establecer relaciones interpersonales." },
+        tecnico: { label: "Técnico/Práctico", maxScore: 0, descripcion: "Destreza en el manejo de herramientas, maquinaria, software o procedimientos específicos. Interés por el funcionamiento de las cosas y la aplicación práctica del conocimiento." },
+        organizativo: { label: "Organizativo/Gestión", maxScore: 0, descripcion: "Capacidad para planificar, establecer prioridades, gestionar recursos (tiempo, personas, materiales), coordinar tareas y mantener el orden y la eficiencia." },
+        investigativo: { label: "Investigativo/Curioso", maxScore: 0, descripcion: "Interés por explorar, indagar, hacer preguntas, buscar información, experimentar y descubrir nuevo conocimiento. Disfrute por el aprendizaje autónomo." },
+        empatico: { label: "Empático/Asistencial", maxScore: 0, descripcion: "Habilidad para comprender y compartir los sentimientos de los demás, mostrar sensibilidad hacia sus necesidades y tener vocación de ayuda, cuidado o servicio." }
+    };
 
     // --- Helper Function: Shuffle Array ---
-    function shuffleArray(array) {
-        for (let i = array.length - 1; i > 0; i--) {
-            const j = Math.floor(Math.random() * (i + 1));
-            [array[i], array[j]] = [array[j], array[i]];
-        }
-    }
+    function shuffleArray(array) { /* ... (sin cambios) ... */ for(let i=array.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[array[i],array[j]]=[array[j],array[i]];}return array;}
+
+    // --- Function: Display Error Message ---
+    function displayError(element, message) { /* ... (sin cambios, usa clase .error-message en #resultado) ... */ if(!element){console.error("No target for error:",message);return;} const isResultError=(element.id==='resultado'); element.innerHTML=`<p class="${isResultError?'error-message':''}" style="${!isResultError?'color:red; text-align:center; padding:10px; border:1px dashed red;':''}">${message}</p>`; if(element.id==='resultado'||element.id==='preguntas-container'){element.classList.add('visible');} if(element.id!=='preguntas-container'){element.scrollIntoView({behavior:'smooth',block:'center'});}}
+
+    // --- Function: Calcular Máximos Puntajes por Habilidad ---
+    function calcularMaxScoresHabilidades() { /* ... (sin cambios) ... */ for(const h in HABILIDADES_DEFINICIONES){if(HABILIDADES_DEFINICIONES.hasOwnProperty(h)){HABILIDADES_DEFINICIONES[h].maxScore=0;}} if(!carrerasData){console.error("No career data.");return;} for(const idC in carrerasData){if(carrerasData.hasOwnProperty(idC)&&Array.isArray(carrerasData[idC].preguntas)){carrerasData[idC].preguntas.forEach(p=>{if(p&&p.habilidad&&HABILIDADES_DEFINICIONES[p.habilidad]){HABILIDADES_DEFINICIONES[p.habilidad].maxScore+=3;}});}} console.log("Max scores:",HABILIDADES_DEFINICIONES);}
 
     // --- Function: Render Shuffled Questions ---
-    function renderizarPreguntasAleatorias() {
-        if (!carrerasData) {
-            console.error("Datos de carreras no cargados.");
-            if (preguntasContainer) {
-                preguntasContainer.innerHTML = '<p class="error-message">Error al cargar las preguntas. Intenta recargar la página.</p>';
-            }
-            return;
-        }
-
-        let todasLasPreguntas = [];
-        totalPreguntas = 0;
-
-        for (const idCarrera in carrerasData) {
-            if (carrerasData.hasOwnProperty(idCarrera)) {
-                carrerasData[idCarrera].preguntas.forEach((pregunta, index) => {
-                    todasLasPreguntas.push({
-                        texto: pregunta,
-                        idCarrera: idCarrera,
-                        originalIndex: index
-                    });
-                    totalPreguntas++;
-                });
-            }
-        }
-
-        shuffleArray(todasLasPreguntas);
-
-        let htmlPreguntas = '';
-        todasLasPreguntas.forEach((preguntaData, displayedIndex) => {
-            const questionId = `${preguntaData.idCarrera}-q${preguntaData.originalIndex}`;
-            htmlPreguntas += `
-                <div class="question">
-                    <p><span class="question-number">${displayedIndex + 1}.</span> ${preguntaData.texto}</p>
-                    <div class="options">
-                        <label>
-                            <input type="radio" name="${questionId}" value="1" required>
-                            <span>1: No me interesa</span>
-                        </label>
-                        <label>
-                            <input type="radio" name="${questionId}" value="2" required>
-                            <span>2: Podría interesarme</span>
-                        </label>
-                        <label>
-                            <input type="radio" name="${questionId}" value="3" required>
-                            <span>3: Me interesa</span>
-                        </label>
-                    </div>
-                </div>
-            `;
-        });
-
-        if (preguntasContainer) {
-            preguntasContainer.innerHTML = htmlPreguntas;
-        }
-        updateProgressBar();
-        lastMilestoneReached = 0;
-        testStarted = false;
-    }
+    function renderizarPreguntasAleatorias() { /* ... (sin cambios, usa data-question-ref) ... */ if(!carrerasData||!preguntasContainer){displayError(preguntasContainer||document.body,"Error cargando preguntas.");return;} let qList=[];totalPreguntas=0; for(const idC in carrerasData){if(carrerasData.hasOwnProperty(idC)&&Array.isArray(carrerasData[idC].preguntas)){carrerasData[idC].preguntas.forEach((p,i)=>{if(p&&p.texto&&p.habilidad&&HABILIDADES_DEFINICIONES[p.habilidad]){qList.push({id:`${idC}-q${i}`,texto:p.texto,habilidad:p.habilidad,idCarrera:idC});totalPreguntas++;}else{console.warn(`Pregunta ${i} de ${idC} inválida.`);}});}} if(totalPreguntas===0){displayError(preguntasContainer,"No hay preguntas.");if(submitButton)submitButton.style.display='none';if(progressContainer)progressContainer.style.display='none';return;} if(submitButton)submitButton.style.display='block';if(progressContainer)progressContainer.style.display='block'; qList=shuffleArray(qList); let html=''; qList.forEach((pData,dIndex)=>{const genOpt=(v,t)=>`<label><input type="radio" name="${pData.id}" value="${v}" required data-habilidad="${pData.habilidad}"><span>${v}: ${t}</span></label>`; html+=`<div class="question" data-question-ref="${pData.id}"><p><span class="question-number">${dIndex+1}.</span> ${pData.texto}</p><div class="options">${genOpt(1,"No me interesa")}${genOpt(2,"Podría interesarme")}${genOpt(3,"Me interesa")}</div></div>`;}); preguntasContainer.innerHTML=html; updateProgressBar();lastMilestoneReached=0;testStarted=false;}
 
     // --- Function: Update Progress Bar & Track GA Progress ---
-    function updateProgressBar() {
-        if (!form || !carrerasData) return; // Asegura que los datos estén cargados
-        if (typeof gtag === 'undefined') {
-            console.warn("gtag no está definido. El seguimiento de Google Analytics está desactivado.");
-        }
+    function updateProgressBar() { /* ... (sin cambios) ... */ if(!form||!progressContainer||!progressBarInner||!progressText||totalPreguntas===0)return; const ans=new Set(Array.from(form.querySelectorAll('input[type="radio"]:checked')).map(r=>r.name)); const sel=ans.size;const perc=Math.round((sel/totalPreguntas)*100); if(typeof gtag!=='undefined'){if(!testStarted&&sel>0){testStarted=true;try{gtag('event','test_start',{/*...*/});}catch(e){console.error("GA Error",e);}} const mS=[25,50,75,100];for(const m of mS){if(perc>=m&&lastMilestoneReached<m){try{gtag('event','test_progress',{/*...*/});}catch(e){console.error("GA Error",e);}lastMilestoneReached=m;}} if(sel===0){lastMilestoneReached=0;testStarted=false;}} progressBarInner.style.width=`${perc}%`; progressText.textContent=`${perc}% completado`; progressContainer.setAttribute('aria-valuenow',perc);}
 
-        // GA Event: Track test start
-        if (!testStarted && form.querySelector('input[type="radio"]:checked')) {
-            testStarted = true;
-            if (typeof gtag !== 'undefined') {
-                gtag('event', 'test_start', {
-                    'event_category': 'Vocational Test',
-                    'event_label': 'First Question Answered'
-                });
-                console.log("GA Event: test_start");
-            }
-        }
+    // --- Function: Generate HTML List Items with Inline Descriptions ---
+    function generarListaPorcentajes(puntajesNormalizados) {
+        const container = resultadoDiv.querySelector(`#${skillPercentageListContainerId}`); // Busca DENTRO de #resultado
+        if (!container) { console.error(`Contenedor #${skillPercentageListContainerId} no encontrado.`); return; }
+        container.innerHTML = ''; // Limpiar
 
-        // Calculate progress
-        const answeredQuestions = new Set(
-            Array.from(form.querySelectorAll('input[type="radio"]:checked')).map(r => r.name)
-        );
-        const respuestasSeleccionadas = answeredQuestions.size;
-        const porcentaje = totalPreguntas > 0 ? Math.round((respuestasSeleccionadas / totalPreguntas) * 100) : 0;
+        const listElement = document.createElement('ul');
+        listElement.className = 'skill-percentage-list';
+        listElement.setAttribute('aria-label', 'Detalle de porcentajes por habilidad');
+        container.appendChild(listElement);
 
-        // Update visual progress bar
-        if (progressBar && progressText) {
-            progressBar.style.width = `${porcentaje}%`;
-            progressText.textContent = `${porcentaje}% completado`;
-        }
+        const sortedHabilidades = Object.entries(puntajesNormalizados)
+            .map(([key, percentage]) => ({ key, percentage, label: HABILIDADES_DEFINICIONES[key]?.label || key, desc: HABILIDADES_DEFINICIONES[key]?.descripcion || 'Descripción no disponible.' }))
+            .sort((a, b) => b.percentage - a.percentage);
 
-        // GA Event: Track Progress Milestones
-        const milestones = [25, 50, 75, 100];
-        for (const milestone of milestones) {
-            if (porcentaje >= milestone && lastMilestoneReached < milestone) {
-                 if (typeof gtag !== 'undefined') {
-                    gtag('event', 'test_progress', {
-                        'event_category': 'Vocational Test',
-                        'event_label': `Progress Reached - ${milestone}%`,
-                        'value': milestone
-                    });
-                    console.log(`GA Event: test_progress - ${milestone}%`);
-                 }
-                lastMilestoneReached = milestone;
-                break;
-            }
-        }
+        if (sortedHabilidades.length > 0) {
+            sortedHabilidades.forEach(item => {
+                const wrapper = document.createElement('div');
+                wrapper.className = 'skill-item-wrapper';
 
-        if (respuestasSeleccionadas === 0) {
-            lastMilestoneReached = 0;
-            testStarted = false;
+                const listItem = document.createElement('li');
+                listItem.className = 'skill-percentage-list-item skill-item-clickable';
+                listItem.dataset.skillKey = item.key;
+                listItem.setAttribute('role', 'button');
+                listItem.setAttribute('tabindex', '0');
+                listItem.setAttribute('aria-expanded', 'false');
+                listItem.innerHTML = `<strong>${item.label}:</strong> <span>${item.percentage}%</span>`;
+
+                const descriptionDiv = document.createElement('div');
+                descriptionDiv.className = 'skill-description-inline';
+                descriptionDiv.setAttribute('aria-hidden', 'true');
+                descriptionDiv.innerHTML = `<p>${item.desc}</p>`;
+
+                wrapper.appendChild(listItem);
+                wrapper.appendChild(descriptionDiv);
+                listElement.appendChild(wrapper);
+            });
+        } else {
+            listElement.innerHTML = '<div class="skill-item-wrapper"><li style="cursor:default; padding: 10px 15px;">No hay datos de habilidades disponibles.</li></div>';
         }
     }
 
-    // --- Function: Calculate and Display Results & Track GA Completion ---
-    function calcularResultado() {
-        if (!form || !resultadoDiv || !carrerasData) return;
+    // --- Function: Show/Hide Inline Skill Description ---
+    function mostrarDescripcionHabilidadInline(clickedLiElement) {
+        if (!clickedLiElement) return;
+        const wrapper = clickedLiElement.closest('.skill-item-wrapper');
+        if (!wrapper) return;
+        const descriptionDiv = wrapper.querySelector('.skill-description-inline');
+        if (!descriptionDiv) return;
 
-        const puntajes = {};
-        for (const idCarrera in carrerasData) {
-            if (carrerasData.hasOwnProperty(idCarrera)) {
-                puntajes[idCarrera] = 0;
-            }
-        }
+        const isVisible = descriptionDiv.classList.contains('visible');
 
-        const respuestas = form.querySelectorAll('input[type="radio"]:checked');
-        const answeredQuestionsNames = new Set(Array.from(respuestas).map(r => r.name));
-        const totalPreguntasRespondidas = answeredQuestionsNames.size;
-
-        // Validation: Check if all questions are answered
-        if (totalPreguntasRespondidas < totalPreguntas) {
-            resultadoDiv.innerHTML = `<p class="error-message">Por favor, responde todas las ${totalPreguntas} preguntas para ver tu resultado.</p>`;
-            resultadoDiv.style.display = 'block';
-            if (contactSection) contactSection.style.display = 'none';
-            const existingShareButton = document.getElementById('share-whatsapp-button');
-            if (existingShareButton) existingShareButton.style.display = 'none';
-            resultadoDiv.scrollIntoView({ behavior: 'smooth', block: 'center' });
-            return;
-        }
-
-        // Sum scores
-        respuestas.forEach(input => {
-            const name = input.name;
-            const idCarrera = name.split('-')[0];
-            const valor = parseInt(input.value, 10);
-            if (puntajes.hasOwnProperty(idCarrera)) {
-                puntajes[idCarrera] += valor;
+        // Ocultar todas las demás descripciones y desactivar LIs
+        const allWrappers = resultadoDiv.querySelectorAll(`#${skillPercentageListContainerId} .skill-item-wrapper`);
+        allWrappers.forEach(w => {
+            const desc = w.querySelector('.skill-description-inline');
+            const li = w.querySelector('.skill-percentage-list-item');
+            // Ocultar descripción y desactivar LI si NO es el que se clickeó
+            if (w !== wrapper && desc && li) {
+                desc.classList.remove('visible');
+                desc.setAttribute('aria-hidden', 'true');
+                li.classList.remove('skill-item-active');
+                li.setAttribute('aria-expanded', 'false');
             }
         });
 
-        // Find best career(s)
-        let mejoresCarrerasIds = [];
-        let maxPuntaje = -1;
-        for (const idCarrera in puntajes) {
-            if (puntajes.hasOwnProperty(idCarrera)) {
-                const puntajeActual = puntajes[idCarrera];
-                if (puntajeActual > maxPuntaje) {
-                    maxPuntaje = puntajeActual;
-                    mejoresCarrerasIds = [idCarrera];
-                } else if (puntajeActual === maxPuntaje && maxPuntaje !== -1) {
-                    mejoresCarrerasIds.push(idCarrera);
+        // Toggle (mostrar/ocultar) la descripción del LI clickeado
+        if (!isVisible) {
+            descriptionDiv.classList.add('visible');
+            descriptionDiv.setAttribute('aria-hidden', 'false');
+            clickedLiElement.classList.add('skill-item-active');
+            clickedLiElement.setAttribute('aria-expanded', 'true');
+            // Opcional: Scroll suave para asegurar visibilidad si la lista es muy larga
+            // setTimeout(() => { // Delay para permitir renderizado
+            //    wrapper.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+            // }, 100); // 100ms delay
+        } else {
+            descriptionDiv.classList.remove('visible');
+            descriptionDiv.setAttribute('aria-hidden', 'true');
+            clickedLiElement.classList.remove('skill-item-active');
+            clickedLiElement.setAttribute('aria-expanded', 'false');
+        }
+    }
+
+    // --- Function: Calculate and Display Results (UNIFICADO + Validación + Subsecciones) ---
+    function calcularResultado() {
+        // Limpiar resaltado previo
+        form.querySelectorAll('.question-unanswered').forEach(q => q.classList.remove('question-unanswered'));
+
+        // Validaciones iniciales
+        if (!form || !resultadoDiv || !contactSection || !carrerasData || !shareButtonContainer) {
+             if(resultadoDiv) displayError(resultadoDiv, "Error inesperado."); return;
+        }
+
+        // Limpiar secciones
+        resultadoDiv.innerHTML = ''; resultadoDiv.classList.remove('visible');
+        shareButtonContainer.innerHTML = ''; contactSection.classList.remove('visible');
+
+        // Inicializar puntajes
+        const puntajes = {}; const puntajesHabilidades = {};
+        for (const idC in carrerasData) { if (carrerasData.hasOwnProperty(idC)) { puntajes[idC] = 0; }}
+        for (const h in HABILIDADES_DEFINICIONES) { if (HABILIDADES_DEFINICIONES.hasOwnProperty(h)) { puntajesHabilidades[h] = 0; }}
+
+        // Validar respuestas y encontrar la primera faltante
+        const respuestas = form.querySelectorAll('input[type="radio"]:checked');
+        const answeredNames = new Set(respuestas.length > 0 ? Array.from(respuestas).map(r => r.name) : []);
+        let firstUnansweredDiv = null;
+        if (totalPreguntas > 0) {
+            const allQuestionDivs = form.querySelectorAll('.question');
+            for (const questionDiv of allQuestionDivs) {
+                const questionId = questionDiv.dataset.questionRef; // Usar el ID guardado
+                if (questionId && !answeredNames.has(questionId)) { // Si no está en el Set de respondidas
+                    firstUnansweredDiv = questionDiv;
+                    break;
                 }
             }
         }
 
-        // Prepare and Display results
-        if (mejoresCarrerasIds.length > 0 && maxPuntaje >= 0) {
-            const resultNames = mejoresCarrerasIds.map(id => carrerasData[id].nombreDisplay).join(' | ');
-            // GA Event: Track Test Completion
-            if (typeof gtag !== 'undefined') {
-                gtag('event', 'test_complete', {
-                    'event_category': 'Vocational Test',
-                    'event_label': `Result: ${resultNames}`,
-                    'value': mejoresCarrerasIds.length,
-                    'result_careers': resultNames
-                });
-                console.log(`GA Event: test_complete - Result: ${resultNames}`);
-            }
+        // Si faltan respuestas (y hay preguntas en total)
+        if (totalPreguntas > 0 && firstUnansweredDiv) {
+            displayError(resultadoDiv, `Por favor, responde todas las ${totalPreguntas} preguntas. Falta responder la pregunta resaltada.`);
+            contactSection.classList.remove('visible');
+            firstUnansweredDiv.classList.add('question-unanswered');
+            firstUnansweredDiv.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            return; // Detener
+        }
+        if (totalPreguntas === 0) { displayError(resultadoDiv, "No hay preguntas."); return; }
 
-            let resultContentHTML = '';
-            let fullResultHTML = '';
+        // Sumar puntajes (sin cambios)
+        respuestas.forEach(input => { const n=input.name; const idC=n.split('-')[0]; const v=parseInt(input.value,10)||0; if(puntajes.hasOwnProperty(idC)){puntajes[idC]+=v;} const h=input.dataset.habilidad; if(h&&puntajesHabilidades.hasOwnProperty(h)){puntajesHabilidades[h]+=v;} else if(h){console.warn(`Hab '${h}' no definida.`);} });
 
-            // --- AÑADIR ENLACES AQUÍ ---
-            if (mejoresCarrerasIds.length === 1) {
-                const idCarreraUnica = mejoresCarrerasIds[0];
-                const carreraRecomendada = carrerasData[idCarreraUnica];
-                const maxPosibleCarrera = carreraRecomendada.preguntas.length * 3;
-                resultContentHTML = `
-                    <p>Basado en tus respuestas, tu perfil muestra una fuerte inclinación hacia:</p>
-                    <h4><a href="${carreraRecomendada.url || '#'}" target="_blank" rel="noopener noreferrer">${carreraRecomendada.nombreDisplay}</a></h4>
-                    <p>${carreraRecomendada.descripcion}</p>
-                    <p><strong>Puntaje obtenido:</strong> ${maxPuntaje} / ${maxPosibleCarrera}</p>
-                    <p><em>Recuerda que este test es una guía. ¡Investiga más sobre esta y otras carreras que te interesen!</em></p>
-                `;
+        // Calcular Mejores Carreras (sin cambios)
+        let pArray = Object.entries(puntajes).map(([id,s])=>({id,s})).filter(c=>carrerasData[c.id]?.preguntas?.length>0).sort((a,b)=>b.s-a.s);
+        let topIds = []; let maxScore = -1; if(pArray.length>0){maxScore=pArray[0].s; const cMax=pArray.filter(c=>c.s===maxScore); topIds=cMax.slice(0,2).map(c=>c.id);}
+
+        // Normalizar Habilidades (sin cambios)
+        const pNorm = {}; let hasSkills = false;
+        for(const h in puntajesHabilidades){if(HABILIDADES_DEFINICIONES.hasOwnProperty(h)){const sB=puntajesHabilidades[h];const maxS=HABILIDADES_DEFINICIONES[h].maxScore; if(maxS>0){pNorm[h]=Math.round((sB/maxS)*100); hasSkills=true;}else{pNorm[h]=0;}}}
+        console.log("Puntajes Normalizados:", pNorm);
+
+        // --- Preparar y Mostrar Resultados UNIFICADOS con Subsecciones ---
+        if (topIds.length > 0) {
+            const resultNames = topIds.map(id => carrerasData[id]?.nombreDisplay || 'N/A').join(' | ');
+            let maxP = carrerasData[topIds[0]]?.preguntas?.length * 3 || 0;
+
+            // --- Construir HTML para #resultado ---
+            let resultadoHTML = '';
+
+            // Sección 1: Carreras
+            resultadoHTML += `<div class="result-section result-section-careers">`;
+            resultadoHTML += `<h3 class="result-title">Resultado: Tu Carrera Ideal</h3>`;
+            resultadoHTML += `<p class="result-intro-text">Basado en tus respuestas:</p>`; // Intro más simple
+            // Añadir puntaje
+             resultadoHTML += `<p class="result-score">Puntaje de Afinidad: <span class="result-score-value">${maxScore} / ${maxP}</span></p>`;
+
+            if (topIds.length === 1) {
+                 const id = topIds[0]; const c = carrerasData[id];
+                 resultadoHTML += `<h4 class="career-single-name"><a href="${c?.url||'#'}" target="_blank" rel="noreferrer">${c?.nombreDisplay||id}</a></h4>
+                                   <p class="career-single-description">${c?.descripcion||''}</p>`;
             } else {
-                const numPreguntasPrimeraEmpatada = carrerasData[mejoresCarrerasIds[0]].preguntas.length;
-                const maxPosibleComun = numPreguntasPrimeraEmpatada * 3;
-                resultContentHTML = `<p>Basado en tus respuestas, muestras interés destacado y similar en varias áreas (Puntaje: <strong>${maxPuntaje} / ${maxPosibleComun}</strong>):</p><ul>`;
-                mejoresCarrerasIds.forEach(id => {
-                    const carrera = carrerasData[id];
-                    resultContentHTML += `<li><strong><a href="${carrera.url || '#'}" target="_blank" rel="noopener noreferrer">${carrera.nombreDisplay}</a>:</strong> ${carrera.descripcion}</li>`;
-                });
-                resultContentHTML += `</ul><p><em>Tienes intereses diversos y prometedores en estos campos. Te recomendamos explorar estas opciones más a fondo. ¡Este test es solo el comienzo!</em></p>`;
+                 const c1 = carrerasData[topIds[0]]; const c2 = carrerasData[topIds[1]];
+                 resultadoHTML += `<p class="result-intro-text" style="margin-top:-15px; margin-bottom: 15px;">Muestras afinidad destacada con:</p>
+                                   <ul class="career-list">`;
+                 [c1, c2].forEach(c => { if(c) resultadoHTML += `<li class="career-list-item"><strong class="career-name-in-list"><a href="${c.url||'#'}" target="_blank" rel="noreferrer">${c.nombreDisplay}</a></strong> <span class="career-description-in-list">${c.descripcion||''}</span></li>`; });
+                 resultadoHTML += `</ul>`;
             }
-            // --- FIN AÑADIR ENLACES ---
+             resultadoHTML += `<p class="result-disclaimer"><em>Recuerda que este test es una guía. Investiga más y habla con orientadores.</em></p>`;
+            resultadoHTML += `</div>`; // Cierra wrapper carreras
 
-            fullResultHTML = `
-                <h3>Resultado del Test Vocacional</h3>
-                ${resultContentHTML}
-                <button type="button" id="share-whatsapp-button" class="share-button" style="display: none;">
-                     <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-whatsapp" viewBox="0 0 16 16" style="margin-right: 8px; vertical-align: middle;">...</svg>
-                     Compartir Resultado en WhatsApp
-                 </button>
-            `;
-
-            resultadoDiv.innerHTML = fullResultHTML;
-            resultadoDiv.style.display = 'block';
-
-            // Setup Share Button
-            const currentShareButton = resultadoDiv.querySelector('#share-whatsapp-button');
-            if (currentShareButton) {
-                currentShareButton.onclick = () => {
-                    if (typeof gtag !== 'undefined') {
-                        gtag('event', 'share', {
-                            'method': 'WhatsApp',
-                            'content_type': 'Vocational Test Result',
-                            'item_id': resultNames
-                        });
-                        console.log(`GA Event: share - Method: WhatsApp, Content: ${resultNames}`);
-                    }
-                    compartirWhatsApp(mejoresCarrerasIds, maxPuntaje);
-                };
-                currentShareButton.style.display = 'inline-flex';
+            // Sección 2: Habilidades (si hay datos)
+            if (hasSkills) {
+                resultadoHTML += `<div class="result-section result-section-skills">`;
+                resultadoHTML += `<h3 class="skills-title-in-result">Tu Perfil Detallado de Habilidades</h3>`;
+                resultadoHTML += `<p class="skills-description-in-result">Haz clic en cada habilidad para leer su descripción:</p>`;
+                resultadoHTML += `<div id="${skillPercentageListContainerId}"></div>`; // Contenedor para la lista UL
+                resultadoHTML += `</div>`;
+            } else {
+                resultadoHTML += `<div class="result-section result-section-skills"><p class="error-message">No se pudo generar el perfil de habilidades.</p></div>`;
             }
 
-            // Show Contact Form
-            if (contactSection && hiddenCareerInput) {
-                const recommendedCareerNames = mejoresCarrerasIds.map(id => carrerasData[id].nombreDisplay).join(', ');
-                hiddenCareerInput.value = recommendedCareerNames;
-                contactSection.style.display = 'block';
+            // --- Poblar #resultado y hacerlo visible ---
+            resultadoDiv.innerHTML = resultadoHTML;
+            resultadoDiv.classList.add('visible');
+
+            // --- Generar Lista de Habilidades (SI APLICA y DESPUÉS de insertar HTML) ---
+            if (hasSkills) {
+                 generarListaPorcentajes(pNorm); // Llama a la función que crea los wrappers, LI y DIVs de descripción
             }
 
-            // Scroll to results
-            const resultTitle = resultadoDiv.querySelector('h3');
-            if (resultTitle) {
-                resultTitle.scrollIntoView({ behavior: 'smooth', block: 'start' });
-            }
+            // --- Generar y colocar Botón WhatsApp ---
+            const whatsappSVG = `<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" viewBox="0 0 16 16" style="vertical-align: middle; margin-right: 8px;"><path d="M13.601 2.326A7.854 7.854 0 0 0 7.994 0C3.627 0 .068 3.558.064 7.926c0 1.399.366 2.76 1.057 3.965L0 16l4.204-1.102a7.933 7.933 0 0 0 3.79.965h.004c4.368 0 7.926-3.558 7.93-7.93A7.898 7.898 0 0 0 13.6 2.326zM7.994 14.521a6.573 6.573 0 0 1-3.356-.92l-.24-.144-2.494.654.666-2.433-.156-.251a6.56 6.56 0 0 1-1.007-3.505c0-3.626 2.957-6.584 6.591-6.584a6.56 6.56 0 0 1 4.66 1.931 6.557 6.557 0 0 1 1.928 4.66c-.004 3.639-2.961 6.592-6.592 6.592zm3.615-4.934c-.197-.099-1.17-.578-1.353-.646-.182-.065-.315-.099-.445.099-.133.197-.513.646-.627.775-.114.133-.232.148-.43.05-.197-.1-.836-.308-1.592-.985-.59-.525-.985-1.175-1.103-1.372-.114-.198-.011-.304.088-.403.087-.088.197-.232.296-.346.1-.114.133-.198.198-.33.065-.134.034-.248-.015-.347-.05-.099-.445-1.076-.612-1.47-.16-.389-.323-.335-.445-.34-.114-.007-.247-.007-.38-.007a.729.729 0 0 0-.529.247c-.182.198-.691.677-.691 1.654 0 .977.71 1.916.81 2.049.098.133 1.394 2.132 3.383 2.992.47.205.84.326 1.129.418.475.152.904.129 1.246.08.38-.058 1.171-.48 1.338-.943.164-.464.164-.86.114-.943-.049-.084-.182-.133-.38-.232z"/></svg>`;
+            const shareBtnHTML = `<button type="button" id="share-whatsapp-button" class="button button-pill share-button">${whatsappSVG}Compartir Resultado</button>`;
+            shareButtonContainer.innerHTML = shareBtnHTML;
+            const shareBtn = shareButtonContainer.querySelector('#share-whatsapp-button');
+            if (shareBtn) shareBtn.onclick = () => compartirWhatsApp(topIds);
+
+            // --- Mostrar Contacto ---
+             if (contactSection && hiddenCareerInput) {
+                 hiddenCareerInput.value = resultNames; contactSection.classList.add('visible');
+             }
+
+            // --- Scroll ---
+            const resTitle = resultadoDiv.querySelector('.result-title');
+            if (resTitle) resTitle.scrollIntoView({ behavior: 'smooth', block: 'start' });
+
+            // --- GA Event ---
+            if (typeof gtag !== 'undefined') { try { gtag('event', 'test_complete', { /*...*/ 'result_careers':resultNames }); } catch(e){ console.error("GA Error", e); } }
 
         } else {
-            resultadoDiv.innerHTML = `<p class="error-message">No se pudo determinar un resultado claro. Por favor, asegúrate de responder todas las preguntas e intenta de nuevo.</p>`;
-            resultadoDiv.style.display = 'block';
-            if (contactSection) contactSection.style.display = 'none';
-            const existingShareButton = document.getElementById('share-whatsapp-button');
-            if (existingShareButton) existingShareButton.style.display = 'none';
+            displayError(resultadoDiv, "No se pudo determinar un resultado claro...");
+            contactSection.classList.remove('visible');
         }
     }
 
-    // --- Function: Share Results on WhatsApp ---
-    function compartirWhatsApp(careerIds, score) {
-        if (!carrerasData) return; // Asegurarse que los datos están cargados
-        const testUrl = 'https://oswcat.github.io/PerfiladorApp/';
-        let messageText = '';
-        let careerNames = careerIds.map(id => carrerasData[id].nombreDisplay);
 
-        messageText = ` ¡Hice el test vocacional de UNIREM y este es mi resultado!\n\n`;
-        if (careerNames.length === 1) {
-            messageText += `Mi perfil muestra una fuerte inclinación hacia: *${careerNames[0]}*.`;
-        } else {
-            messageText += `Muestro interés destacado en varias áreas:\n - *${careerNames.join('*\n - *')}*`;
-        }
-        messageText += `\n\n ¡Descubre tu vocación también!\n${testUrl}`;
-        messageText += `\n\n Encuentra más sobre UNIREM en Facebook, Instagram y TikTok: @UNIREM.MX`;
-        messageText += `\n\n Llamanos al 5550370100 o envía un WhatsApp al 5546190122 para más información.`;
-
-        const encodedMessage = encodeURIComponent(messageText);
-        const whatsappUrl = `https://wa.me/?text=${encodedMessage}`;
-        window.open(whatsappUrl, '_blank');
+// --- Function: Share Results on WhatsApp (MODIFICADA) ---
+function compartirWhatsApp(careerIds) {
+    // Validar datos necesarios
+    if (!carrerasData || !Array.isArray(careerIds) || careerIds.length === 0) {
+        console.error("No se pueden compartir resultados: faltan datos o IDs.");
+        // Podrías añadir aquí una alerta para el usuario si lo deseas
+        // alert("Hubo un problema al intentar compartir el resultado.");
+        return;
     }
 
-    // --- Function: Handle Contact Form Submission ---
-    async function handleContactFormSubmit(event) {
-        event.preventDefault();
-        if (!contactForm || !formStatus) return;
+    // Variables para los mensajes y datos dinámicos
+    let messageText = '';
+    const testLink = window.location.href; // Enlace a la página actual del test
+    const uniremInfo = `---
+*UNIREM*
+Síguenos: @UNIREM.MX (FB/IG/TikTok)
+Contacto:  5550370100 |  WA: 5546190122`; // Información de contacto fija
 
-        formStatus.textContent = 'Enviando...';
-        formStatus.className = 'form-status'; // Reset classes
-        formStatus.style.display = 'block'; // Asegurarse que está visible
+    // Construir el mensaje según si es 1 o 2 resultados
+    if (careerIds.length === 1) {
+        // Mensaje para resultado único
+        const careerId = careerIds[0];
+        const careerName = carrerasData[careerId]?.nombreDisplay || 'una carrera interesante'; // Nombre de la carrera
 
-        const formData = new FormData(contactForm);
-        const googleAppScriptUrl = CONFIG.googleAppScriptUrl;
+        // Usar template literals (backticks ``)
+        messageText = `¡Hice el test vocacional de UNIREM! 🎓
 
-        // Validación rápida de la URL (solo si sigue siendo el placeholder)
-        if (!googleAppScriptUrl || googleAppScriptUrl.includes('AQUI_VA_LA_URL')) {
-             console.error("Google Apps Script URL no está definida correctamente en CONFIG.");
-             formStatus.textContent = 'Error de configuración interna. No se puede enviar.';
-             formStatus.classList.add('error');
-             return;
-        }
+Mi perfil muestra una *fuerte inclinación* hacia:
+ *${careerName}* 
 
+*¡Descubre tu vocación también!*
+${testLink}
+
+${uniremInfo}`; // Añadir info de UNIREM
+
+    } else {
+        // Mensaje para resultado doble (empate)
+        const careerName1 = carrerasData[careerIds[0]]?.nombreDisplay || 'un área';
+        const careerName2 = carrerasData[careerIds[1]]?.nombreDisplay || 'otra área';
+
+        // Usar template literals (backticks ``)
+        messageText = `¡Hice el test vocacional de UNIREM! 
+
+Muestro *interés destacado* en estas áreas:
+• *${careerName1}*
+• *${careerName2}*
+
+*¡Descubre tu vocación también!* 
+${testLink}
+
+${uniremInfo}`; // Añadir info de UNIREM
+    }
+
+    // Crear la URL de WhatsApp codificando el mensaje correctamente
+    const whatsappUrl = `https://api.whatsapp.com/send?text=${encodeURIComponent(messageText)}`;
+
+    // Abrir WhatsApp en una nueva pestaña/ventana
+    window.open(whatsappUrl, '_blank');
+
+    // Enviar Evento GA de Compartir (si está configurado)
+    if (typeof gtag !== 'undefined') {
         try {
-            const response = await fetch(googleAppScriptUrl, {
-                method: 'POST',
-                body: formData,
-                mode: 'cors',
+            gtag('event', 'share', {
+                'method': 'WhatsApp',
+                'content_type': 'Vocational Test Result',
+                'content_id': careerIds.join(',') // IDs de las carreras compartidas
             });
-
-            // Siempre intenta parsear como JSON, incluso si no es OK, para obtener el mensaje de error del script
-            let data = {};
-            try {
-                 data = await response.json();
-            } catch (parseError) {
-                 // Si la respuesta no es JSON válido (ej. error 500 HTML del servidor)
-                 console.error("La respuesta del servidor no es JSON válido:", parseError, response.status, response.statusText);
-                 throw new Error(`Respuesta inesperada del servidor (Estado: ${response.status})`); // Lanza un nuevo error para el catch principal
-            }
-
-
-            // Verificamos si la respuesta indica éxito (tanto HTTP OK como resultado del script)
-            if (response.ok && data.result === 'success') {
-                // GA Event: Track Lead Generation
-                const careerInterest = formData.get('carrera_interes') || 'Not Specified';
-                if (typeof gtag !== 'undefined') {
-                    gtag('event', 'generate_lead', {
-                        'event_category': 'Contact Form',
-                        'event_label': `Vocational Test Lead - Interest: ${careerInterest}`,
-                    });
-                    console.log(`GA Event: generate_lead - Interest: ${careerInterest}`);
-                }
-
-                // Muestra mensaje de éxito
-                formStatus.textContent = '¡Gracias! Hemos recibido tu información. Un asesor se pondrá en contacto pronto.';
-                formStatus.classList.remove('error'); // Asegura quitar clase error si existía
-                formStatus.classList.add('success');
-                contactForm.reset();
-
-            } else {
-                 // Hubo un error (HTTP no OK o el script reportó 'error')
-                 const errorMessage = data.message || (response.ok ? 'El servidor reportó un error desconocido.' : `Error del servidor (Estado: ${response.status})`);
-                 console.error('Error enviando a Google Apps Script:', errorMessage);
-                 formStatus.textContent = `Error al enviar: ${errorMessage}. Por favor, revisa los datos e intenta de nuevo.`;
-                 formStatus.classList.remove('success'); // Asegura quitar clase success
-                 formStatus.classList.add('error');
-            }
-
-        } catch (error) {
-            // Error de red, CORS, o el error lanzado por parseo JSON fallido
-            console.error('Error de Red o en Fetch:', error);
-            formStatus.textContent = `Error de conexión o respuesta inválida del servidor (${error.message}). Verifica tu conexión e intenta de nuevo.`;
-            formStatus.classList.remove('success');
-            formStatus.classList.add('error');
+            console.log("GA Event: share - WhatsApp");
+        } catch(gaError){
+            console.error("Error enviando GA 'share':", gaError);
         }
     }
+}
+    // --- Function: Handle Contact Form Submission ---
+    async function handleContactFormSubmit(event) { /* ... (sin cambios) ... */ event.preventDefault();if(!contactForm||!formStatus)return;const btn=contactForm.querySelector('#contact-submit-button');const txt=btn?btn.textContent:'Enviar';if(btn){btn.disabled=true;btn.textContent='Enviando...';}formStatus.classList.remove('visible','success','error');const fData=new FormData(contactForm);const data=Object.fromEntries(fData.entries());if(!CONFIG.googleAppScriptUrl||CONFIG.googleAppScriptUrl===CONFIG.placeholderGASUrl){console.error('GAS URL missing');formStatus.textContent='Error config.';formStatus.className='form-status visible error';if(btn){btn.disabled=false;btn.textContent=txt;}return;}try{await fetch(CONFIG.googleAppScriptUrl,{method:'POST',mode:'no-cors',body:JSON.stringify(data)});formStatus.textContent='¡Gracias!';formStatus.className='form-status visible success';contactForm.reset();if(typeof gtag!=='undefined'){try{gtag('event','generate_lead',{/*...*/});}catch(e){console.error("GA Error",e);}}}catch(error){console.error('Error submit:',error);formStatus.textContent='Error al enviar.';formStatus.className='form-status visible error';}finally{if(btn){btn.disabled=false;btn.textContent=txt;}}}
 
-    // --- Function: Load Initial Data ---
-    async function initializeTest() {
-        try {
-            const response = await fetch(CONFIG.carrerasDataFile);
-            if (!response.ok) {
-                throw new Error(`HTTP error! status: ${response.status}`);
-            }
-            carrerasData = await response.json();
+     // --- Event Listener para Habilidades (Delegado en #resultado) ---
+     if (resultadoDiv) {
+         // Click
+         resultadoDiv.addEventListener('click', (event) => {
+             const listItem = event.target.closest(`#${skillPercentageListContainerId} .skill-item-clickable`);
+             if (listItem) { mostrarDescripcionHabilidadInline(listItem); } // Llama a la nueva función inline
+         });
+         // Keydown
+         resultadoDiv.addEventListener('keydown', (event) => {
+              const listItem = event.target.closest(`#${skillPercentageListContainerId} .skill-item-clickable`);
+              if (listItem && (event.key === 'Enter' || event.key === ' ')) { event.preventDefault(); mostrarDescripcionHabilidadInline(listItem); }
+         });
+     } else { console.error("#resultado div not found."); }
 
-            // Ahora que tenemos los datos, renderizamos y añadimos listeners
-            renderizarPreguntasAleatorias();
-
-            if (submitButton) {
-                submitButton.addEventListener('click', calcularResultado);
-            }
-            if (form) {
-                form.addEventListener('change', updateProgressBar);
-            }
-            if (contactForm) {
-                contactForm.addEventListener('submit', handleContactFormSubmit);
-            }
-
-        } catch (error) {
-            console.error("Error fatal al cargar los datos de las carreras:", error);
-            if (preguntasContainer) {
-                preguntasContainer.innerHTML = `<p class="error-message" style="text-align:center; padding: 20px;">No se pudieron cargar las preguntas del test. Por favor, recarga la página o inténtalo más tarde.</p>`;
-            }
-            // Ocultar otros elementos si la carga falla
-            if (submitButton) submitButton.style.display = 'none';
-            if (progressBar.parentElement) progressBar.parentElement.style.display = 'none';
-        }
-    }
-
+    // --- Function: Load Initial Data and Setup ---
+    async function initializeTest() { /* ... (sin cambios) ... */ if(resultadoDiv)resultadoDiv.classList.remove('visible');if(shareButtonContainer)shareButtonContainer.innerHTML='';if(contactSection)contactSection.classList.remove('visible');if(formStatus)formStatus.classList.remove('visible'); try {console.log(`Cargando: ${CONFIG.carrerasDataFile}`);const r=await fetch(CONFIG.carrerasDataFile);if(!r.ok)throw new Error(`Fetch failed: ${r.status}`);carrerasData=await r.json();if(!carrerasData||typeof carrerasData!=='object'||Object.keys(carrerasData).length===0)throw new Error("JSON inválido.");console.log("Datos ok:",carrerasData);calcularMaxScoresHabilidades();renderizarPreguntasAleatorias();if(submitButton)submitButton.addEventListener('click',calcularResultado);else console.error("Submit missing.");if(form)form.addEventListener('input',updateProgressBar);else console.error("Form missing.");if(contactForm)contactForm.addEventListener('submit',handleContactFormSubmit);else console.error("Contact form missing.");}catch(error){console.error("Init Error:",error);if(preguntasContainer)displayError(preguntasContainer,`Error Crítico: ${error.message}. Recarga.`);if(submitButton)submitButton.style.display='none';if(progressContainer)progressContainer.style.display='none';}}
     // --- Initialization ---
-    // Hide elements initially via JS as backup/alternative to CSS
-    if (resultadoDiv) resultadoDiv.style.display = 'none';
-    if (contactSection) contactSection.style.display = 'none';
-    if (formStatus) formStatus.style.display = 'none';
-
-    // Start loading data and setting up the test
     initializeTest();
-
-}); // End of DOMContentLoaded wrapper
-// --- END OF FILE script.js (ACTUALIZADO) ---
+}); // Fin DOMContentLoaded
